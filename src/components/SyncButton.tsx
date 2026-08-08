@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   useAuth,
   signInWithGoogle,
@@ -97,7 +98,7 @@ export default function SyncButton() {
       <button className="btn-ghost h-9 max-w-[7rem] truncate" onClick={() => setOpen(true)}>
         {user ? `👤 ${label}` : 'Sign in'}
       </button>
-      {open && (
+      {open && createPortal(
         <div
           className="fixed inset-0 z-[60] grid place-items-center bg-black/70 p-4"
           onClick={closeModal}
@@ -205,7 +206,8 @@ export default function SyncButton() {
               </p>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

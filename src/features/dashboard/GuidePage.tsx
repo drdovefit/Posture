@@ -64,6 +64,17 @@ export default function GuidePage() {
         </p>
       </div>
 
+      <img
+        src={`${BASE}brand/${tab === 'side' ? 'take-side.png' : 'illustration.png'}`}
+        alt="Taking a posture photo"
+        className="w-full rounded-2xl"
+        loading="lazy"
+        onError={(e) => {
+          // Side "taking a photo" art is optional until provided; fall back.
+          (e.currentTarget as HTMLImageElement).src = `${BASE}brand/illustration.png`;
+        }}
+      />
+
       {/* Tabs */}
       <div className="grid grid-cols-2 gap-2">
         {(['side', 'front'] as Tab[]).map((t) => (
