@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  // Set VITE_BASE=/Posture/ in CI to deploy under a GitHub Pages subpath.
+  base: process.env.VITE_BASE || '/',
   plugins: [
     react(),
     VitePWA({

@@ -8,8 +8,11 @@ import { FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
 
 let landmarkerPromise: Promise<PoseLandmarker> | null = null;
 
-const LOCAL_WASM = '/models/wasm';
-const LOCAL_MODEL = '/models/pose_landmarker_lite.task';
+// Prefix with the app's base URL so assets resolve whether the app is served
+// from the domain root or a subpath (e.g. GitHub Pages: /Posture/).
+const BASE = import.meta.env.BASE_URL || '/';
+const LOCAL_WASM = `${BASE}models/wasm`;
+const LOCAL_MODEL = `${BASE}models/pose_landmarker_lite.task`;
 const CDN_WASM =
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm';
 const CDN_MODEL =
