@@ -24,7 +24,7 @@ export default function App() {
             <img
               src={`${import.meta.env.BASE_URL}brand/wordmark.png`}
               alt="Posture Lab"
-              className="h-8 w-auto sm:h-9"
+              className="h-11 w-auto sm:h-14"
             />
           </NavLink>
           <div className="ml-auto flex items-center gap-2">
