@@ -99,13 +99,20 @@ export default function SyncButton() {
       </button>
       {open && (
         <div
-          className="fixed inset-0 z-50 grid place-items-center bg-slate-900/40 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[60] grid place-items-center bg-black/70 p-4"
           onClick={closeModal}
         >
           <div
-            className="card w-full max-w-sm space-y-4 p-6 text-center"
+            className="card relative w-full max-w-sm space-y-4 p-6 text-center"
             onClick={(e) => e.stopPropagation()}
           >
+            <button
+              onClick={closeModal}
+              aria-label="Close"
+              className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+            >
+              ✕
+            </button>
             <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-brand-500 text-2xl text-white">
               ⌇
             </div>
