@@ -38,6 +38,22 @@ const router = createHashRouter([
   },
 ]);
 
+// Keep the installed PWA fresh: poll for a new service worker and reload once
+// it takes control, so users always get the latest deploy without manual cache
+// clearing.
+if ('serviceWorker' in navigator) {
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+  navigator.serviceWorker.ready.then((reg) => {
+    reg.update();
+    setInterval(() => reg.update(), 30_000);
+  });
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <RouterProvider router={router} />

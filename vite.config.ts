@@ -5,6 +5,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   // Set VITE_BASE=/Posture/ in CI to deploy under a GitHub Pages subpath.
   base: process.env.VITE_BASE || '/',
+  define: {
+    __BUILD_ID__: JSON.stringify(new Date().toISOString().replace('T', ' ').slice(0, 16)),
+  },
   plugins: [
     react(),
     VitePWA({
