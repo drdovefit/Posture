@@ -18,7 +18,6 @@ type Stage = 'pick' | 'edit';
 const VIEWS: { id: ViewType; label: string; hint: string }[] = [
   { id: 'lateral', label: 'Side', hint: 'Stand side-on to the camera' },
   { id: 'anterior', label: 'Front', hint: 'Face the camera' },
-  { id: 'posterior', label: 'Back', hint: 'Back to the camera' },
 ];
 
 export default function AnalyzePage() {
@@ -141,7 +140,7 @@ export default function AnalyzePage() {
       <h1 className="text-2xl font-bold">New analysis</h1>
 
       {/* View selector — pick which view, then add a photo for it. */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {VIEWS.map((v) => (
           <button
             key={v.id}
