@@ -33,14 +33,21 @@ async function create(): Promise<PoseLandmarker> {
   const modelPath = useLocal ? LOCAL_MODEL : CDN_MODEL;
 
   const fileset = await FilesetResolver.forVisionTasks(wasmBase);
-  return PoseLandmarker.createFromOptions(fileset, {
-    baseOptions: { modelAssetPath: modelPath, delegate: 'GPU' },
-    runningMode: 'IMAGE',
+  const opts = (delegate: 'GPU' | 'CPU') => ({
+    baseOptions: { modelAssetPath: modelPath, delegate },
+    runningMode: 'IMAGE' as const,
     numPoses: 1,
     minPoseDetectionConfidence: 0.4,
     minPosePresenceConfidence: 0.4,
     minTrackingConfidence: 0.4,
   });
+  // GPU is fastest, but some mobile browsers (notably iOS Safari) can fail to
+  // create a GPU delegate — fall back to CPU so detection still works.
+  try {
+    return await PoseLandmarker.createFromOptions(fileset, opts('GPU'));
+  } catch {
+    return await PoseLandmarker.createFromOptions(fileset, opts('CPU'));
+  }
 }
 
 export function getPoseLandmarker(): Promise<PoseLandmarker> {
