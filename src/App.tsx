@@ -20,13 +20,12 @@ export default function App() {
     <div className="mx-auto flex min-h-full max-w-6xl flex-col">
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
         <div className="flex items-center gap-3 px-4 py-3">
-          <NavLink to="/" className="flex items-center gap-2 font-bold">
+          <NavLink to="/" className="flex items-center">
             <img
-              src={`${import.meta.env.BASE_URL}brand/logo-mark.png`}
-              alt="PostureLab"
-              className="h-8 w-8 rounded-lg"
+              src={`${import.meta.env.BASE_URL}brand/wordmark.png`}
+              alt="Posture Lab"
+              className="h-8 w-auto sm:h-9"
             />
-            <span className="text-lg tracking-tight">PostureLab</span>
           </NavLink>
           <div className="ml-auto flex items-center gap-2">
             <SyncButton />
