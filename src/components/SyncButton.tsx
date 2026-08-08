@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 import { useAuth, signInWithGoogle, doSignOut } from '../state/auth';
 import { syncAll } from '../lib/sync';
 
@@ -18,6 +20,13 @@ export default function SyncButton() {
   const [status, setStatus] = useState('');
   const syncedFor = useRef<string | null>(null);
 
+  // Phone flow state.
+  const [phone, setPhone] = useState('');
+  const [code, setCode] = useState('');
+  const [phoneStep, setPhoneStep] = useState<'enter' | 'verify'>('enter');
+  const confirmationRef = useRef<ConfirmationResult | null>(null);
+  const verifierRef = useRef<RecaptchaVerifier | null>(null);
+
   async function runSync() {
     if (!user) return;
     setBusy(true);
@@ -26,14 +35,13 @@ export default function SyncButton() {
       const r = await syncAll(user.uid);
       setStatus(`Synced ✓ (${r.pushed} up, ${r.pulled} down)`);
     } catch (e) {
-      setStatus('Sync failed — check connection and try again.');
+      setStatus('Sync failed — check your connection and try again.');
       console.error(e);
     } finally {
       setBusy(false);
     }
   }
 
-  // Auto-sync once when a session becomes signed-in.
   useEffect(() => {
     if (user && syncedFor.current !== user.uid) {
       syncedFor.current = user.uid;
@@ -43,14 +51,70 @@ export default function SyncButton() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  function resetPhone() {
+    setPhone('');
+    setCode('');
+    setPhoneStep('enter');
+    confirmationRef.current = null;
+    verifierRef.current?.clear();
+    verifierRef.current = null;
+  }
+
+  function closeModal() {
+    setOpen(false);
+    setStatus('');
+    resetPhone();
+  }
+
   async function handleGoogle() {
     setBusy(true);
     setStatus('');
     try {
       await signInWithGoogle();
-      setOpen(false);
+      closeModal();
     } catch (e) {
-      setStatus('Sign-in failed. Please try again.');
+      setStatus('Google sign-in failed. Please try again.');
+      console.error(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sendCode() {
+    const num = phone.replace(/[^\d+]/g, '');
+    if (!num.startsWith('+') || num.length < 8) {
+      setStatus('Enter your number with country code, e.g. +15551234567');
+      return;
+    }
+    setBusy(true);
+    setStatus('');
+    try {
+      verifierRef.current?.clear();
+      verifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible',
+      });
+      confirmationRef.current = await signInWithPhoneNumber(auth, num, verifierRef.current);
+      setPhoneStep('verify');
+      setStatus('Code sent — check your texts.');
+    } catch (e) {
+      setStatus('Could not send the code. Check the number (with country code) and try again.');
+      verifierRef.current?.clear();
+      verifierRef.current = null;
+      console.error(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function verifyCode() {
+    if (!confirmationRef.current) return;
+    setBusy(true);
+    setStatus('');
+    try {
+      await confirmationRef.current.confirm(code.trim());
+      closeModal();
+    } catch (e) {
+      setStatus('That code didn’t match. Try again.');
       console.error(e);
     } finally {
       setBusy(false);
@@ -58,7 +122,7 @@ export default function SyncButton() {
   }
 
   const label = user
-    ? user.displayName?.split(' ')[0] || user.email?.split('@')[0] || 'Account'
+    ? user.displayName?.split(' ')[0] || user.email?.split('@')[0] || user.phoneNumber || 'Account'
     : 'Sign in';
 
   return (
@@ -69,7 +133,7 @@ export default function SyncButton() {
       {open && (
         <div
           className="fixed inset-0 z-50 grid place-items-center bg-slate-900/40 p-4 backdrop-blur-sm"
-          onClick={() => setOpen(false)}
+          onClick={closeModal}
         >
           <div
             className="card w-full max-w-sm space-y-4 p-6 text-center"
@@ -83,7 +147,9 @@ export default function SyncButton() {
               <>
                 <div>
                   <h2 className="text-lg font-bold">You're signed in</h2>
-                  <p className="mt-1 text-sm text-slate-500">{user.email}</p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {user.email || user.phoneNumber}
+                  </p>
                 </div>
                 <button className="btn-primary w-full" onClick={runSync} disabled={busy}>
                   {busy ? 'Syncing…' : 'Sync now'}
@@ -92,8 +158,7 @@ export default function SyncButton() {
                   className="btn-ghost w-full"
                   onClick={async () => {
                     await doSignOut();
-                    setStatus('');
-                    setOpen(false);
+                    closeModal();
                   }}
                 >
                   Sign out
@@ -104,18 +169,56 @@ export default function SyncButton() {
                 <div>
                   <h2 className="text-lg font-bold">Sign in to PostureLab</h2>
                   <p className="mt-1 text-sm text-slate-500">
-                    Sync your profiles, assessments and photos across your devices.
+                    Sync your data across your devices.
                   </p>
                 </div>
+
                 <button
                   onClick={handleGoogle}
                   disabled={busy}
                   className="flex w-full items-center justify-center gap-3 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
                 >
                   <GoogleIcon />
-                  {busy ? 'Opening…' : 'Continue with Google'}
+                  Continue with Google
                 </button>
-                <p className="text-xs text-slate-400">Your data stays private to your account.</p>
+
+                <div className="flex items-center gap-3 text-xs text-slate-400">
+                  <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" /> or use your phone
+                  <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                </div>
+
+                {phoneStep === 'enter' ? (
+                  <div className="space-y-2 text-left">
+                    <input
+                      type="tel"
+                      inputMode="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+1 555 123 4567"
+                      className="input"
+                    />
+                    <button className="btn-primary w-full" onClick={sendCode} disabled={busy}>
+                      {busy ? 'Sending…' : 'Send code'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2 text-left">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={code}
+                      onChange={(e) => setCode(e.target.value)}
+                      placeholder="6-digit code"
+                      className="input tracking-widest"
+                    />
+                    <button className="btn-primary w-full" onClick={verifyCode} disabled={busy}>
+                      {busy ? 'Verifying…' : 'Verify & sign in'}
+                    </button>
+                    <button className="btn-ghost w-full" onClick={resetPhone}>
+                      Use a different number
+                    </button>
+                  </div>
+                )}
               </>
             )}
 
@@ -124,6 +227,8 @@ export default function SyncButton() {
                 {status}
               </p>
             )}
+            {/* Invisible reCAPTCHA host for phone auth. */}
+            <div id="recaptcha-container" />
           </div>
         </div>
       )}
