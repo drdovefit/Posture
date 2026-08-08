@@ -20,9 +20,11 @@ export default function App() {
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
         <div className="flex items-center gap-3 px-4 py-3">
           <NavLink to="/" className="flex items-center gap-2 font-bold">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-500 text-white">
-              ⌇
-            </span>
+            <img
+              src={`${import.meta.env.BASE_URL}brand/logo-mark.png`}
+              alt="PostureLab"
+              className="h-8 w-8 rounded-lg"
+            />
             <span className="text-lg tracking-tight">PostureLab</span>
           </NavLink>
           <div className="ml-auto flex items-center gap-2">

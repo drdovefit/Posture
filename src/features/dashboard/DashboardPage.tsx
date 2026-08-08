@@ -67,15 +67,26 @@ export default function DashboardPage() {
       </div>
 
       {!assessments?.length ? (
-        <div className="card grid place-items-center gap-4 p-12 text-center">
-          <div className="text-5xl">📷</div>
-          <p className="max-w-sm text-slate-500">
-            No assessments yet. Upload a side, front, or back photo and PostureLab
-            will draw your posture lines and score your alignment.
-          </p>
-          <Link to="/analyze" className="btn-primary">
-            Start your first analysis
-          </Link>
+        <div className="card overflow-hidden">
+          <div className="grid items-center gap-6 p-8 md:grid-cols-2 md:p-10">
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold">See your posture, clearly.</h2>
+              <p className="text-slate-500">
+                Upload a side, front, or back photo and PostureLab auto-detects
+                your joints, draws your plumb line, and scores your alignment —
+                privately, on your device.
+              </p>
+              <Link to="/analyze" className="btn-primary">
+                Start your first analysis
+              </Link>
+            </div>
+            <img
+              src={`${import.meta.env.BASE_URL}brand/hero.jpg`}
+              alt="Posture analysis with alignment markers"
+              className="w-full rounded-xl object-cover"
+              loading="lazy"
+            />
+          </div>
         </div>
       ) : (
         <>

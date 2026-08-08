@@ -40,6 +40,13 @@ export default function GuidePage() {
         </p>
       </div>
 
+      <img
+        src={`${import.meta.env.BASE_URL}brand/illustration.png`}
+        alt="Taking a posture photo with a phone"
+        className="w-full rounded-2xl"
+        loading="lazy"
+      />
+
       <ol className="space-y-3">
         {steps.map((s, i) => (
           <li key={s.title} className="card flex gap-4 p-4">

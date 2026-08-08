@@ -164,7 +164,12 @@ export default function AnalyzePage() {
 
       {stage === 'pick' && (
         <div className="card grid place-items-center gap-4 p-10 text-center">
-          <div className="text-5xl">🧍</div>
+          <img
+            src={`${import.meta.env.BASE_URL}brand/hero-icons.jpg`}
+            alt=""
+            className="mb-1 max-h-40 rounded-xl object-contain"
+            loading="lazy"
+          />
           <p className="max-w-sm text-sm text-slate-500">
             For best results use a full-body photo against a plain background,
             camera at hip height, standing relaxed.
