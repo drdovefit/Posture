@@ -10,52 +10,52 @@ function color(score: number) {
   return '#ef4444';
 }
 
+/**
+ * Circular posture-score gauge. The ring is drawn in SVG, but the number is
+ * rendered as plain HTML centered over it — this avoids SVG <text> transform
+ * quirks so the number always shows (including on iOS Safari).
+ */
 export default function ScoreRing({ score, size = 128, label = 'Posture score' }: Props) {
   const stroke = size * 0.09;
   const r = (size - stroke) / 2;
   const cx = size / 2;
-  const cy = size / 2;
   const c = 2 * Math.PI * r;
-  const offset = c * (1 - Math.max(0, Math.min(100, score)) / 100);
+  const clamped = Math.max(0, Math.min(100, score));
+  const offset = c * (1 - clamped / 100);
   return (
     <div className="flex flex-col items-center">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {/* Track + progress arc. Only the arc is rotated (via an SVG attribute
-            transform, which is reliable across browsers) so it starts at 12 o'clock. */}
-        <circle
-          cx={cx}
-          cy={cy}
-          r={r}
-          fill="none"
-          strokeWidth={stroke}
-          className="stroke-slate-200 dark:stroke-slate-800"
-        />
-        <g transform={`rotate(-90 ${cx} ${cy})`}>
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           <circle
             cx={cx}
-            cy={cy}
+            cy={cx}
             r={r}
             fill="none"
             strokeWidth={stroke}
-            stroke={color(score)}
-            strokeLinecap="round"
-            strokeDasharray={c}
-            strokeDashoffset={offset}
-            style={{ transition: 'stroke-dashoffset .6s ease' }}
+            className="stroke-slate-200 dark:stroke-slate-800"
           />
-        </g>
-        {/* Number is rendered upright — no rotation, so it shows on every browser. */}
-        <text
-          x={cx}
-          y={cy}
-          dominantBaseline="central"
-          textAnchor="middle"
-          className="fill-slate-800 dark:fill-slate-100"
-          style={{ fontSize: size * 0.3, fontWeight: 700 }}
+          <g transform={`rotate(-90 ${cx} ${cx})`}>
+            <circle
+              cx={cx}
+              cy={cx}
+              r={r}
+              fill="none"
+              strokeWidth={stroke}
+              stroke={color(score)}
+              strokeLinecap="round"
+              strokeDasharray={c}
+              strokeDashoffset={offset}
+              style={{ transition: 'stroke-dashoffset .6s ease' }}
+            />
+          </g>
+        </svg>
+        <div
+          className="absolute inset-0 flex items-center justify-center font-bold tabular-nums text-slate-800 dark:text-slate-100"
+          style={{ fontSize: size * 0.3 }}
         >
           {score}
-        </text>
-      </svg>
+        </div>
+      </div>
       {label && <span className="mt-1 text-xs font-medium text-slate-500">{label}</span>}
     </div>
   );

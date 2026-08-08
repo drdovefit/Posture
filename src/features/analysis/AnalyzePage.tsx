@@ -134,61 +134,62 @@ export default function AnalyzePage() {
     setImageUrl('');
   }
 
-  return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold">New analysis</h1>
-        <p className="text-sm text-slate-500">
-          Upload or capture a photo, and PostureLab maps the landmarks and draws
-          your posture lines.
-        </p>
-      </div>
+  const viewLabel = VIEWS.find((v) => v.id === view)!.label.toLowerCase();
 
-      {/* View selector */}
-      <div className="flex flex-wrap gap-2">
+  return (
+    <div className="space-y-4">
+      <h1 className="text-2xl font-bold">New analysis</h1>
+
+      {/* View selector — pick which view, then add a photo for it. */}
+      <div className="grid grid-cols-3 gap-2">
         {VIEWS.map((v) => (
           <button
             key={v.id}
             onClick={() => setView(v.id)}
-            className={`rounded-xl border px-4 py-2 text-sm ${
+            className={`rounded-xl border px-3 py-2 text-left text-sm transition-colors ${
               view === v.id
                 ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-200'
                 : 'border-slate-200 hover:border-slate-300 dark:border-slate-800'
             }`}
           >
             <div className="font-semibold">{v.label} view</div>
-            <div className="text-xs text-slate-500">{v.hint}</div>
+            <div className="hidden text-xs text-slate-500 sm:block">{v.hint}</div>
           </button>
         ))}
       </div>
 
       {stage === 'pick' && (
-        <div className="card grid place-items-center gap-4 p-10 text-center">
-          <img
-            src={`${import.meta.env.BASE_URL}brand/hero-icons.jpg`}
-            alt=""
-            className="mb-1 max-h-40 rounded-xl object-contain"
-            loading="lazy"
-          />
-          <p className="max-w-sm text-sm text-slate-500">
-            For best results use a full-body photo against a plain background,
-            camera at hip height, standing relaxed.
-          </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            <button className="btn-primary" onClick={() => fileRef.current?.click()}>
-              Upload photo
-            </button>
-            <button className="btn-ghost" onClick={() => setShowCamera(true)}>
-              Use camera
-            </button>
+        <div className="card overflow-hidden">
+          <div className="grid items-center gap-5 p-5 sm:grid-cols-2">
+            <img
+              src={`${import.meta.env.BASE_URL}brand/hero-icons.jpg`}
+              alt=""
+              className="hidden w-full rounded-xl object-cover sm:block"
+              loading="lazy"
+            />
+            <div className="space-y-3">
+              <h2 className="text-lg font-semibold capitalize">Add a {viewLabel} photo</h2>
+              <p className="text-sm text-slate-500">
+                Full-body photo, plain background, camera at hip height, standing
+                relaxed. It’s auto-detected the moment you add it.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button className="btn-primary" onClick={() => fileRef.current?.click()}>
+                  ＋ Add {viewLabel} photo
+                </button>
+                <button className="btn-ghost" onClick={() => setShowCamera(true)}>
+                  Use camera
+                </button>
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={onFile}
+              />
+            </div>
           </div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={onFile}
-          />
         </div>
       )}
 
@@ -209,7 +210,7 @@ export default function AnalyzePage() {
                   {detecting ? 'Detecting…' : 'Re-detect'}
                 </button>
                 <button className="btn-ghost" onClick={reset}>
-                  New photo
+                  ＋ Add another photo
                 </button>
               </div>
             </div>
