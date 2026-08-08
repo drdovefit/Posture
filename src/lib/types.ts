@@ -58,7 +58,12 @@ export interface AnalysisResult {
   suggestionIds: string[];
 }
 
-export interface Client {
+/** Stable cross-device id assigned when a record is first synced to the cloud. */
+export interface Syncable {
+  cid?: string;
+}
+
+export interface Client extends Syncable {
   id?: number;
   name: string;
   dob?: string;
@@ -66,7 +71,7 @@ export interface Client {
   createdAt: number;
 }
 
-export interface Assessment {
+export interface Assessment extends Syncable {
   id?: number;
   clientId: number;
   createdAt: number;
@@ -83,7 +88,7 @@ export interface Assessment {
   score: number;
 }
 
-export interface PainEntry {
+export interface PainEntry extends Syncable {
   id?: number;
   clientId: number;
   createdAt: number;
