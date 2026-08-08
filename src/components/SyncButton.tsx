@@ -114,9 +114,11 @@ export default function SyncButton() {
             >
               ✕
             </button>
-            <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-brand-500 text-2xl text-white">
-              ⌇
-            </div>
+            <img
+              src={`${import.meta.env.BASE_URL}brand/logo-mark.png`}
+              alt="PostureLab"
+              className="mx-auto h-12 w-12 rounded-2xl"
+            />
 
             {user ? (
               <>
