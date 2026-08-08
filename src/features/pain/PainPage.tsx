@@ -42,21 +42,25 @@ export default function PainPage() {
 
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [region, setRegion] = useState(REGIONS[0]);
+  const [customRegion, setCustomRegion] = useState('');
   const [severity, setSeverity] = useState(3);
   const [notes, setNotes] = useState('');
 
   async function add() {
     if (activeId == null) return;
+    const finalRegion =
+      region === 'Other' ? customRegion.trim() || 'Other' : region;
     await addPain({
       clientId: activeId,
       createdAt: Date.now(),
       date,
-      region,
+      region: finalRegion,
       severity,
       notes: notes.trim() || undefined,
     });
     setNotes('');
     setSeverity(3);
+    setCustomRegion('');
   }
 
   const chartData = [...(entries ?? [])]
@@ -73,20 +77,40 @@ export default function PainPage() {
       </div>
 
       <div className="card space-y-3 p-4">
-        <div className="grid gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <label className="block min-w-0 text-sm">
             <span className="mb-1 block text-slate-500">Date</span>
-            <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
+            <input
+              type="date"
+              className="input min-w-0"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
           </label>
           <label className="block min-w-0 text-sm">
             <span className="mb-1 block text-slate-500">Region</span>
-            <select className="input" value={region} onChange={(e) => setRegion(e.target.value)}>
+            <select
+              className="input min-w-0"
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+            >
               {REGIONS.map((r) => (
                 <option key={r}>{r}</option>
               ))}
             </select>
           </label>
         </div>
+        {region === 'Other' && (
+          <label className="block text-sm">
+            <span className="mb-1 block text-slate-500">Which area?</span>
+            <input
+              className="input"
+              value={customRegion}
+              onChange={(e) => setCustomRegion(e.target.value)}
+              placeholder="Type the body area"
+            />
+          </label>
+        )}
         <label className="block text-sm">
           <span className="mb-1 flex justify-between text-slate-500">
             <span>Severity</span>

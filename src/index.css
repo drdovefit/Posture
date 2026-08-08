@@ -17,6 +17,14 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Stop native date/time inputs (iOS Safari) from forcing an intrinsic min
+   width that overflows their grid column. */
+input[type='date'],
+input[type='time'] {
+  min-width: 0;
+  max-width: 100%;
+}
+
 @layer components {
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium

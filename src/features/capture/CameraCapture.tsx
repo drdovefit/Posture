@@ -44,8 +44,23 @@ export default function CameraCapture({ view, onCapture, onClose }: Props) {
   const [reviewing, setReviewing] = useState(false);
   const [frames, setFrames] = useState<Frame[]>([]);
   const [index, setIndex] = useState(0);
+  const [showGuide, setShowGuide] = useState(false);
 
   const viewLabel = view === 'lateral' ? 'Side view' : 'Front view';
+  const guideTips =
+    view === 'lateral'
+      ? [
+          'Stand side-on — your profile faces the camera.',
+          'Get your whole body in frame, head to feet.',
+          'Arms relaxed at your sides, look straight ahead.',
+          'Camera at hip height, ~3 m away, held level.',
+        ]
+      : [
+          'Face the camera straight on.',
+          'Feet about hip-width, weight even, arms relaxed.',
+          'Get your whole body in frame, head to feet.',
+          'Camera at hip height, ~3 m away, held level.',
+        ];
 
   async function startStream(f: Facing) {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -239,6 +254,37 @@ export default function CameraCapture({ view, onCapture, onClose }: Props) {
             {recording && (
               <div className="absolute right-4 top-4 flex items-center gap-2 rounded-full bg-red-600 px-3 py-1 text-sm text-white">
                 <span className="h-2 w-2 animate-pulse rounded-full bg-white" /> REC · {frameCount}
+              </div>
+            )}
+            {/* Guide button — shows tips for the current view. */}
+            <button
+              onClick={() => setShowGuide(true)}
+              className="absolute left-4 top-4 rounded-full bg-black/60 px-3 py-1.5 text-sm font-medium text-white"
+            >
+              ? Guide
+            </button>
+            {showGuide && (
+              <div
+                className="absolute inset-0 z-20 grid place-items-center bg-black/70 p-6"
+                onClick={() => setShowGuide(false)}
+              >
+                <div
+                  className="w-full max-w-xs rounded-2xl bg-white p-5 text-slate-800"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <h3 className="mb-2 text-base font-bold">{viewLabel} — how to</h3>
+                  <ul className="list-inside list-disc space-y-1.5 text-sm text-slate-600">
+                    {guideTips.map((t) => (
+                      <li key={t}>{t}</li>
+                    ))}
+                  </ul>
+                  <button
+                    className="btn-primary mt-4 w-full"
+                    onClick={() => setShowGuide(false)}
+                  >
+                    Got it
+                  </button>
+                </div>
               </div>
             )}
           </>
