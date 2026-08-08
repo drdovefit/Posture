@@ -93,12 +93,6 @@ export default function GuidePage() {
       </div>
 
       <div className="card overflow-hidden">
-        <img
-          src={c.image}
-          alt={c.title}
-          className="max-h-80 w-full bg-slate-50 object-contain dark:bg-slate-900/40"
-          loading="lazy"
-        />
         <div className="space-y-4 p-5">
           <h2 className="text-lg font-bold">{c.title}</h2>
           <div>
