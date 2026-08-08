@@ -193,7 +193,8 @@ export default function AnalyzePage() {
       )}
 
       {stage === 'edit' && imageUrl && (
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <>
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <div className="space-y-3">
             <PostureEditor
               imageUrl={imageUrl}
@@ -227,30 +228,37 @@ export default function AnalyzePage() {
               <h2 className="mb-1 font-semibold">Measurements</h2>
               <MetricList metrics={result.metrics} />
             </div>
-            {suggestions.length > 0 && (
-              <div className="card p-4">
-                <h2 className="mb-2 font-semibold">Suggested focus areas</h2>
-                <ul className="space-y-2">
-                  {suggestions.map((s) => (
-                    <li key={s.id} className="text-sm">
-                      <span className="chip mr-2 bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200">
-                        {s.category}
-                      </span>
-                      <span className="font-medium">{s.title}</span>
-                      <p className="mt-0.5 text-slate-500">{s.detail}</p>
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-3 text-xs text-slate-400">
-                  Educational only — not a treatment plan.
-                </p>
-              </div>
-            )}
             <button className="btn-primary w-full" onClick={save} disabled={activeId == null}>
               Save assessment
             </button>
           </div>
-        </div>
+          </div>
+
+          {suggestions.length > 0 && (
+            <div className="card p-4">
+              <div className="mb-3 flex items-baseline justify-between">
+                <h2 className="font-semibold">Suggested focus areas</h2>
+                <span className="text-xs text-slate-400">Educational only — not a treatment plan.</span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {suggestions.map((s) => (
+                  <div
+                    key={s.id}
+                    className="rounded-xl border border-slate-200 p-3 dark:border-slate-800"
+                  >
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="chip bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200">
+                        {s.category}
+                      </span>
+                      <span className="text-sm font-medium">{s.title}</span>
+                    </div>
+                    <p className="text-sm text-slate-500">{s.detail}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {showCamera && (

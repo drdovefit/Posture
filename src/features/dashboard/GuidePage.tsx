@@ -1,36 +1,60 @@
-const steps = [
-  {
-    title: 'Take a good photo',
-    body: 'Full body in frame, plain background, even lighting. Phone at hip height, roughly 3m away. Wear fitted clothing so joints are visible.',
-  },
-  {
-    title: 'Pick the view',
-    body: 'Side (lateral) shows forward-head, rounded shoulders and pelvic lean. Front/back (anterior/posterior) show shoulder, hip and knee asymmetry.',
-  },
-  {
-    title: 'Let AI place the points',
-    body: 'PostureLab auto-detects your joints and draws a plumb line and body chain. Drag any point to correct it — measurements update live.',
-  },
-  {
-    title: 'Read your score',
-    body: 'Each measurement is graded good / mild / moderate against typical neutral ranges, and combined into a 0–100 posture score.',
-  },
-  {
-    title: 'Track progress',
-    body: 'Save assessments, compare before/after, and follow your score trend. Log discomfort in the pain diary to see it next to your posture.',
-  },
-];
+import { useState } from 'react';
 
-const metricGuide = [
-  ['Forward head', 'Ear carried ahead of the shoulder — loads the neck.'],
-  ['Trunk lean', 'Upper body tipped forward or back of vertical.'],
-  ['Hip / pelvis position', 'Pelvis shifted relative to the ankles.'],
-  ['Shoulder / pelvic level', 'One side higher than the other (front/back view).'],
-  ['Lateral shift', 'Trunk off-center over the feet.'],
-  ['Knee alignment', 'Bent / hyper-extended (side) or knock/bow (front).'],
+type Tab = 'side' | 'front';
+
+const BASE = import.meta.env.BASE_URL;
+
+const CONTENT: Record<
+  Tab,
+  { title: string; image: string; how: string[]; measures: [string, string][] }
+> = {
+  side: {
+    title: 'Side (lateral) view',
+    image: `${BASE}brand/hero.jpg`,
+    how: [
+      'Stand side-on to the camera (your profile faces it).',
+      'Get your whole body in frame, from head to feet.',
+      'Arms relaxed at your sides, look straight ahead.',
+      'Camera at hip height, ~3 m away, held level.',
+    ],
+    measures: [
+      ['Forward head', 'Ear carried ahead of the shoulder — loads the neck.'],
+      ['Trunk lean', 'Upper body tipped forward or back of vertical.'],
+      ['Hip / pelvis position', 'Pelvis shifted relative to the ankles.'],
+      ['Knee alignment', 'Knee bent or hyper-extended in standing.'],
+      ['Overall plumb', 'How well the whole body stacks over the ankles.'],
+    ],
+  },
+  front: {
+    title: 'Front (anterior) view',
+    image: `${BASE}brand/illustration.png`,
+    how: [
+      'Face the camera straight on.',
+      'Feet about hip-width, weight even, arms relaxed.',
+      'Get your whole body in frame, from head to feet.',
+      'Camera at hip height, ~3 m away, held level.',
+    ],
+    measures: [
+      ['Head tilt', 'Whether the eyes/head are level side to side.'],
+      ['Shoulder level', 'One shoulder higher than the other.'],
+      ['Pelvic level', 'A side-to-side (lateral) tilt of the hips.'],
+      ['Lateral shift', 'Trunk off-center over the feet.'],
+      ['Knee valgus/varus', 'Knees converging (knock) or bowing out.'],
+    ],
+  },
+};
+
+const steps = [
+  ['Pick the view & add a photo', 'Choose Side or Front, then add or capture a full-body photo.'],
+  ['Let AI place the points', 'PostureLab auto-detects your joints and draws the plumb line. Drag any point to fine-tune — measurements update live.'],
+  ['Read your score', 'Each measurement is graded good / mild / moderate and combined into a 0–100 posture score.'],
+  ['Track progress', 'Save it, compare before/after, and follow your trend over time.'],
 ];
 
 export default function GuidePage() {
+  const [tab, setTab] = useState<Tab>('side');
+  const c = CONTENT[tab];
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
@@ -40,37 +64,64 @@ export default function GuidePage() {
         </p>
       </div>
 
-      <img
-        src={`${import.meta.env.BASE_URL}brand/illustration.png`}
-        alt="Taking a posture photo with a phone"
-        className="w-full rounded-2xl"
-        loading="lazy"
-      />
-
-      <ol className="space-y-3">
-        {steps.map((s, i) => (
-          <li key={s.title} className="card flex gap-4 p-4">
-            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-500 font-bold text-white">
-              {i + 1}
-            </div>
-            <div>
-              <h3 className="font-semibold">{s.title}</h3>
-              <p className="text-sm text-slate-500">{s.body}</p>
-            </div>
-          </li>
+      {/* Tabs */}
+      <div className="grid grid-cols-2 gap-2">
+        {(['side', 'front'] as Tab[]).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`rounded-xl border px-4 py-2 text-sm font-semibold capitalize transition-colors ${
+              tab === t
+                ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-200'
+                : 'border-slate-200 hover:border-slate-300 dark:border-slate-800'
+            }`}
+          >
+            {t} view
+          </button>
         ))}
-      </ol>
+      </div>
 
-      <div className="card p-4">
-        <h2 className="mb-3 font-semibold">What the measurements mean</h2>
-        <dl className="space-y-2">
-          {metricGuide.map(([k, v]) => (
-            <div key={k} className="grid grid-cols-[10rem_1fr] gap-2 text-sm">
-              <dt className="font-medium">{k}</dt>
-              <dd className="text-slate-500">{v}</dd>
-            </div>
+      <div className="card overflow-hidden">
+        <img src={c.image} alt={c.title} className="w-full" loading="lazy" />
+        <div className="space-y-4 p-5">
+          <h2 className="text-lg font-bold">{c.title}</h2>
+          <div>
+            <h3 className="mb-1 font-semibold">How to take the photo</h3>
+            <ul className="list-inside list-disc space-y-1 text-sm text-slate-500">
+              {c.how.map((h) => (
+                <li key={h}>{h}</li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h3 className="mb-1 font-semibold">What this view measures</h3>
+            <dl className="space-y-1.5">
+              {c.measures.map(([k, v]) => (
+                <div key={k} className="grid grid-cols-[9rem_1fr] gap-2 text-sm">
+                  <dt className="font-medium">{k}</dt>
+                  <dd className="text-slate-500">{v}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h2 className="mb-3 text-lg font-semibold">The 4 steps</h2>
+        <ol className="space-y-3">
+          {steps.map(([title, body], i) => (
+            <li key={title} className="card flex gap-4 p-4">
+              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-500 font-bold text-white">
+                {i + 1}
+              </div>
+              <div>
+                <h3 className="font-semibold">{title}</h3>
+                <p className="text-sm text-slate-500">{body}</p>
+              </div>
+            </li>
           ))}
-        </dl>
+        </ol>
       </div>
 
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
