@@ -28,7 +28,12 @@ export default function PostureEditor({
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [dragKey, setDragKey] = useState<keyof Landmarks | null>(null);
+  const [hoverKey, setHoverKey] = useState<keyof Landmarks | null>(null);
   const overlay = buildOverlay(view, landmarks, metrics);
+
+  // The label to show: the point being dragged takes priority over hover.
+  const activeKey = dragKey ?? hoverKey;
+  const activePoint = activeKey ? landmarks[activeKey] : undefined;
 
   function toNormalized(clientX: number, clientY: number): Point {
     const el = wrapRef.current!;
@@ -102,6 +107,8 @@ export default function PostureEditor({
             (e.target as HTMLElement).setPointerCapture(e.pointerId);
             setDragKey(key);
           }}
+          onPointerEnter={() => !readOnly && setHoverKey(key)}
+          onPointerLeave={() => setHoverKey((k) => (k === key ? null : k))}
           title={LANDMARK_LABELS[key as string] ?? String(key)}
           aria-label={LANDMARK_LABELS[key as string] ?? String(key)}
           className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow ${
@@ -117,6 +124,19 @@ export default function PostureEditor({
           }}
         />
       ))}
+
+      {/* Floating label for the hovered / dragged landmark. */}
+      {!readOnly && activeKey && activePoint && (
+        <div
+          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-slate-900/90 px-2 py-1 text-xs font-medium text-white shadow-lg"
+          style={{
+            left: `${activePoint.x * 100}%`,
+            top: `calc(${activePoint.y * 100}% - 14px)`,
+          }}
+        >
+          {LANDMARK_LABELS[activeKey as string] ?? String(activeKey)}
+        </div>
+      )}
     </div>
   );
 }
