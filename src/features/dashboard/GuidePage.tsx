@@ -10,7 +10,7 @@ const CONTENT: Record<
 > = {
   side: {
     title: 'Side (lateral) view',
-    image: `${BASE}brand/hero.jpg`,
+    image: `${BASE}brand/side.jpg`,
     how: [
       'Stand side-on to the camera (your profile faces it).',
       'Get your whole body in frame, from head to feet.',
@@ -27,7 +27,7 @@ const CONTENT: Record<
   },
   front: {
     title: 'Front (anterior) view',
-    image: `${BASE}brand/illustration.png`,
+    image: `${BASE}brand/front.png`,
     how: [
       'Face the camera straight on.',
       'Feet about hip-width, weight even, arms relaxed.',
@@ -82,7 +82,12 @@ export default function GuidePage() {
       </div>
 
       <div className="card overflow-hidden">
-        <img src={c.image} alt={c.title} className="w-full" loading="lazy" />
+        <img
+          src={c.image}
+          alt={c.title}
+          className="max-h-80 w-full bg-slate-50 object-contain dark:bg-slate-900/40"
+          loading="lazy"
+        />
         <div className="space-y-4 p-5">
           <h2 className="text-lg font-bold">{c.title}</h2>
           <div>

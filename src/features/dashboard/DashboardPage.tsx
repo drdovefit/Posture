@@ -81,9 +81,9 @@ export default function DashboardPage() {
               </Link>
             </div>
             <img
-              src={`${import.meta.env.BASE_URL}brand/hero.jpg`}
-              alt="Posture analysis with alignment markers"
-              className="w-full rounded-xl object-cover"
+              src={`${import.meta.env.BASE_URL}brand/results.jpg`}
+              alt="Posture score and measurements"
+              className="w-full rounded-xl object-contain"
               loading="lazy"
             />
           </div>

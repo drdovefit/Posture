@@ -161,9 +161,9 @@ export default function AnalyzePage() {
         <div className="card overflow-hidden">
           <div className="grid items-center gap-5 p-5 sm:grid-cols-2">
             <img
-              src={`${import.meta.env.BASE_URL}brand/hero-icons.jpg`}
+              src={`${import.meta.env.BASE_URL}brand/${view === 'lateral' ? 'side.jpg' : 'front.png'}`}
               alt=""
-              className="hidden w-full rounded-xl object-cover sm:block"
+              className="mx-auto hidden max-h-72 rounded-xl object-contain sm:block"
               loading="lazy"
             />
             <div className="space-y-3">

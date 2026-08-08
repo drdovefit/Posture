@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useTheme } from './state/theme';
 import ClientSwitcher from './components/ClientSwitcher';
+import SyncButton from './components/SyncButton';
 
 const nav = [
   { to: '/', label: 'Dashboard', icon: '◱', end: true },
@@ -28,6 +29,7 @@ export default function App() {
             <span className="text-lg tracking-tight">PostureLab</span>
           </NavLink>
           <div className="ml-auto flex items-center gap-2">
+            <SyncButton />
             <ClientSwitcher />
             <button
               onClick={toggle}

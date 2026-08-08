@@ -72,6 +72,15 @@ export default function PainPage() {
         </p>
       </div>
 
+      {!entries?.length && (
+        <img
+          src={`${import.meta.env.BASE_URL}brand/pain.jpg`}
+          alt=""
+          className="mx-auto max-h-56 w-full rounded-2xl object-contain"
+          loading="lazy"
+        />
+      )}
+
       <div className="card space-y-3 p-4">
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-sm">

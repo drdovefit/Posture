@@ -107,8 +107,17 @@ export default function HistoryPage() {
       )}
 
       {!assessments?.length ? (
-        <div className="card p-10 text-center text-slate-500">
-          No saved assessments yet.
+        <div className="card overflow-hidden text-center">
+          <img
+            src={`${import.meta.env.BASE_URL}brand/progress.jpg`}
+            alt=""
+            className="mx-auto max-h-64 w-full object-contain"
+            loading="lazy"
+          />
+          <p className="p-6 pt-0 text-slate-500">
+            No saved assessments yet — analyze a photo and your progress will
+            chart here over time.
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
