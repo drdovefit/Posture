@@ -10,18 +10,27 @@ interface Props {
 type Mode = 'photo' | 'video';
 type Facing = 'user' | 'environment';
 
+interface Frame {
+  blob: Blob;
+  url: string;
+}
+
+const MAX_FRAMES = 60; // ~9s at 150ms sampling
+const SAMPLE_MS = 150;
+
 /**
- * Camera capture with:
- *  - front/back camera toggle,
- *  - a self-timer (0/3/10s) so you can prop the phone and pose yourself,
- *  - a video mode: record a short clip, then scrub to (or auto-pick) the best
- *    frame and analyze that.
+ * Camera capture with front/back toggle, a self-timer, and a video mode.
+ *
+ * Video mode samples still frames from the live preview *while recording*
+ * (instead of recording a file and seeking it afterwards). Seeking a recorded
+ * blob is unreliable on iOS Safari and produced black frames — sampling live
+ * frames avoids that entirely and works everywhere.
  */
 export default function CameraCapture({ view, onCapture, onClose }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const samplerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const framesRef = useRef<Frame[]>([]);
 
   const [error, setError] = useState('');
   const [mode, setMode] = useState<Mode>('photo');
@@ -29,12 +38,14 @@ export default function CameraCapture({ view, onCapture, onClose }: Props) {
   const [timer, setTimer] = useState(0);
   const [countdown, setCountdown] = useState(0);
   const [recording, setRecording] = useState(false);
+  const [frameCount, setFrameCount] = useState(0);
 
-  // Video review state.
-  const [clipUrl, setClipUrl] = useState('');
-  const reviewRef = useRef<HTMLVideoElement>(null);
-  const [duration, setDuration] = useState(0);
-  const [frameTime, setFrameTime] = useState(0);
+  // Review state (after recording).
+  const [reviewing, setReviewing] = useState(false);
+  const [frames, setFrames] = useState<Frame[]>([]);
+  const [index, setIndex] = useState(0);
+
+  const viewLabel = view === 'lateral' ? 'Side view' : 'Front view';
 
   async function startStream(f: Facing) {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -54,35 +65,36 @@ export default function CameraCapture({ view, onCapture, onClose }: Props) {
   }
 
   useEffect(() => {
-    startStream(facing);
+    if (!reviewing) startStream(facing);
     return () => streamRef.current?.getTracks().forEach((t) => t.stop());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facing]);
 
   useEffect(() => {
     return () => {
-      if (clipUrl) URL.revokeObjectURL(clipUrl);
+      if (samplerRef.current) clearInterval(samplerRef.current);
+      framesRef.current.forEach((f) => URL.revokeObjectURL(f.url));
     };
-  }, [clipUrl]);
+  }, []);
 
-  function grabFrame(el: HTMLVideoElement): Promise<Blob> {
+  function grabFrame(el: HTMLVideoElement, maxW = 900): Promise<Blob> {
+    const scale = Math.min(1, maxW / (el.videoWidth || maxW));
     const canvas = document.createElement('canvas');
-    canvas.width = el.videoWidth;
-    canvas.height = el.videoHeight;
+    canvas.width = Math.round((el.videoWidth || maxW) * scale);
+    canvas.height = Math.round((el.videoHeight || maxW) * scale);
     const ctx = canvas.getContext('2d')!;
-    // Un-mirror the front camera so the saved image matches reality.
     if (facing === 'user') {
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
     }
-    ctx.drawImage(el, 0, 0);
-    return new Promise((res) => canvas.toBlob((b) => res(b!), 'image/jpeg', 0.92));
+    ctx.drawImage(el, 0, 0, canvas.width, canvas.height);
+    return new Promise((res) => canvas.toBlob((b) => res(b!), 'image/jpeg', 0.9));
   }
 
+  // --- Photo ----------------------------------------------------------------
   async function shootNow() {
-    if (videoRef.current) onCapture(await grabFrame(videoRef.current));
+    if (videoRef.current) onCapture(await grabFrame(videoRef.current, 1400));
   }
-
   function shoot() {
     if (timer > 0) {
       let n = timer;
@@ -101,84 +113,75 @@ export default function CameraCapture({ view, onCapture, onClose }: Props) {
     }
   }
 
+  // --- Video (live frame sampling) ------------------------------------------
   function startRecording() {
-    if (!streamRef.current) return;
-    chunksRef.current = [];
-    const rec = new MediaRecorder(streamRef.current);
-    rec.ondataavailable = (e) => e.data.size && chunksRef.current.push(e.data);
-    rec.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: chunksRef.current[0]?.type || 'video/mp4' });
-      setClipUrl(URL.createObjectURL(blob));
-    };
-    recorderRef.current = rec;
-    rec.start();
+    framesRef.current.forEach((f) => URL.revokeObjectURL(f.url));
+    framesRef.current = [];
+    setFrameCount(0);
     setRecording(true);
+    samplerRef.current = setInterval(async () => {
+      const el = videoRef.current;
+      if (!el || el.videoWidth === 0) return;
+      if (framesRef.current.length >= MAX_FRAMES) {
+        stopRecording();
+        return;
+      }
+      const blob = await grabFrame(el, 900);
+      framesRef.current.push({ blob, url: URL.createObjectURL(blob) });
+      setFrameCount(framesRef.current.length);
+    }, SAMPLE_MS);
   }
 
   function stopRecording() {
-    recorderRef.current?.stop();
+    if (samplerRef.current) clearInterval(samplerRef.current);
+    samplerRef.current = null;
     setRecording(false);
-  }
-
-  async function useFrame() {
-    const el = reviewRef.current;
-    if (!el) return;
-    // Ensure the frame at frameTime is rendered before grabbing it.
-    if (Math.abs(el.currentTime - frameTime) > 0.05) {
-      el.currentTime = frameTime;
-      await new Promise((r) => el.addEventListener('seeked', r, { once: true }));
-    }
-    onCapture(await grabFrame(el));
+    const captured = framesRef.current;
+    if (captured.length === 0) return;
+    setFrames(captured);
+    setIndex(Math.floor(captured.length / 2)); // suggested = middle
+    setReviewing(true);
+    streamRef.current?.getTracks().forEach((t) => t.stop());
   }
 
   function retake() {
-    if (clipUrl) URL.revokeObjectURL(clipUrl);
-    setClipUrl('');
-    setDuration(0);
-    setFrameTime(0);
+    frames.forEach((f) => URL.revokeObjectURL(f.url));
+    framesRef.current = [];
+    setFrames([]);
+    setIndex(0);
+    setReviewing(false);
+    setFrameCount(0);
     startStream(facing);
   }
 
-  const hint =
-    view === 'lateral' ? 'Stand side-on, whole body in frame' : 'Face the camera, arms relaxed';
-
-  // --- Video review screen ---------------------------------------------------
-  if (clipUrl) {
+  // --- Review screen ---------------------------------------------------------
+  if (reviewing && frames.length > 0) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-black">
         <div className="relative flex-1 overflow-hidden">
-          <video
-            ref={reviewRef}
-            src={clipUrl}
-            playsInline
-            muted
+          <img
+            src={frames[index].url}
+            alt=""
             className="h-full w-full object-contain"
-            style={{ transform: facing === 'user' ? 'scaleX(-1)' : undefined }}
-            onLoadedMetadata={(e) => {
-              const d = e.currentTarget.duration || 0;
-              setDuration(d);
-              const mid = d / 2; // suggested frame = midpoint (usually settled pose)
-              setFrameTime(mid);
-              e.currentTarget.currentTime = mid;
-            }}
           />
           <div className="pointer-events-none absolute left-1/2 top-0 h-full w-px -translate-x-1/2 border-l-2 border-dashed border-yellow-300/70" />
+          <div className="absolute inset-x-0 top-4 text-center">
+            <span className="rounded-full bg-brand-500 px-3 py-1 text-sm font-semibold text-white">
+              {viewLabel}
+            </span>
+          </div>
         </div>
         <div className="space-y-3 bg-black p-5 text-white">
           <div className="text-center text-sm text-white/80">
-            Scrub to the best frame, or use the suggested one.
+            Frame {index + 1} of {frames.length} — scrub to the best one.
           </div>
           <input
             type="range"
             min={0}
-            max={duration || 0}
-            step={0.03}
-            value={frameTime}
-            onChange={(e) => {
-              const t = Number(e.target.value);
-              setFrameTime(t);
-              if (reviewRef.current) reviewRef.current.currentTime = t;
-            }}
+            max={frames.length - 1}
+            step={1}
+            value={index}
+            onChange={(e) => setIndex(Number(e.target.value))}
             className="w-full accent-brand-500"
           />
           <div className="flex items-center justify-between gap-3">
@@ -187,15 +190,11 @@ export default function CameraCapture({ view, onCapture, onClose }: Props) {
             </button>
             <button
               className="btn-ghost !bg-slate-800 !text-white"
-              onClick={() => {
-                const mid = duration / 2;
-                setFrameTime(mid);
-                if (reviewRef.current) reviewRef.current.currentTime = mid;
-              }}
+              onClick={() => setIndex(Math.floor(frames.length / 2))}
             >
-              Suggested frame
+              Suggested
             </button>
-            <button className="btn-primary" onClick={useFrame}>
+            <button className="btn-primary" onClick={() => onCapture(frames[index].blob)}>
               Use this frame
             </button>
           </div>
@@ -204,7 +203,7 @@ export default function CameraCapture({ view, onCapture, onClose }: Props) {
     );
   }
 
-  // --- Live camera screen ----------------------------------------------------
+  // --- Live camera -----------------------------------------------------------
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
       <div className="relative flex-1 overflow-hidden">
@@ -223,8 +222,13 @@ export default function CameraCapture({ view, onCapture, onClose }: Props) {
             />
             <div className="pointer-events-none absolute inset-0">
               <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 border-l-2 border-dashed border-yellow-300/70" />
-              <div className="absolute inset-x-0 top-4 text-center text-sm text-white/90">
-                {hint}
+              <div className="absolute inset-x-0 top-4 flex flex-col items-center gap-1">
+                <span className="rounded-full bg-brand-500 px-3 py-1 text-sm font-semibold text-white">
+                  {viewLabel}
+                </span>
+                <span className="text-xs text-white/90">
+                  {view === 'lateral' ? 'Stand side-on, whole body in frame' : 'Face the camera, arms relaxed'}
+                </span>
               </div>
             </div>
             {countdown > 0 && (
@@ -234,16 +238,14 @@ export default function CameraCapture({ view, onCapture, onClose }: Props) {
             )}
             {recording && (
               <div className="absolute right-4 top-4 flex items-center gap-2 rounded-full bg-red-600 px-3 py-1 text-sm text-white">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-white" /> REC
+                <span className="h-2 w-2 animate-pulse rounded-full bg-white" /> REC · {frameCount}
               </div>
             )}
           </>
         )}
       </div>
 
-      {/* Controls */}
       <div className="space-y-3 bg-black p-5">
-        {/* Mode + options row */}
         <div className="flex items-center justify-center gap-2 text-sm text-white">
           <div className="flex overflow-hidden rounded-full border border-slate-700">
             <button
@@ -274,7 +276,6 @@ export default function CameraCapture({ view, onCapture, onClose }: Props) {
           )}
         </div>
 
-        {/* Action row */}
         <div className="flex items-center justify-between gap-4">
           <button className="btn-ghost !bg-slate-800 !text-white" onClick={onClose}>
             Cancel

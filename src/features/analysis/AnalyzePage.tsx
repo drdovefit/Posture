@@ -160,12 +160,14 @@ export default function AnalyzePage() {
       {stage === 'pick' && (
         <div className="card overflow-hidden">
           <div className="grid items-center gap-5 p-5 sm:grid-cols-2">
-            <img
-              src={`${import.meta.env.BASE_URL}brand/${view === 'lateral' ? 'side.jpg' : 'front.png'}`}
-              alt=""
-              className="mx-auto hidden max-h-72 rounded-xl object-contain sm:block"
-              loading="lazy"
-            />
+            <div className="hidden items-center justify-center sm:flex">
+              <img
+                src={`${import.meta.env.BASE_URL}brand/${view === 'lateral' ? 'side.jpg' : 'front.png'}`}
+                alt=""
+                className="max-h-72 rounded-xl object-contain"
+                loading="lazy"
+              />
+            </div>
             <div className="space-y-3">
               <h2 className="text-lg font-semibold capitalize">Add a {viewLabel} photo</h2>
               <p className="text-sm text-slate-500">
