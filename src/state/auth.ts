@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
+  createUserWithEmailAndPassword,
   onAuthStateChanged,
+  signInWithEmailAndPassword,
   signInWithPopup,
   signInWithRedirect,
   signOut,
@@ -33,6 +35,34 @@ export async function signInWithGoogle() {
       return;
     }
     throw err;
+  }
+}
+
+export async function signInEmail(email: string, password: string) {
+  await signInWithEmailAndPassword(auth, email, password);
+}
+
+export async function signUpEmail(email: string, password: string) {
+  await createUserWithEmailAndPassword(auth, email, password);
+}
+
+/** Turn a Firebase auth error code into a friendly message. */
+export function authErrorMessage(err: unknown): string {
+  const code = (err as { code?: string })?.code ?? '';
+  switch (code) {
+    case 'auth/invalid-email':
+      return 'That email address doesn’t look right.';
+    case 'auth/missing-password':
+    case 'auth/weak-password':
+      return 'Use a password of at least 6 characters.';
+    case 'auth/email-already-in-use':
+      return 'That email already has an account — try signing in instead.';
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+      return 'Wrong email or password.';
+    default:
+      return 'Something went wrong. Please try again.';
   }
 }
 

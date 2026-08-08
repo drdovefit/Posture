@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from 'firebase/auth';
-import { auth } from '../lib/firebase';
-import { useAuth, signInWithGoogle, doSignOut } from '../state/auth';
+import {
+  useAuth,
+  signInWithGoogle,
+  signInEmail,
+  signUpEmail,
+  authErrorMessage,
+  doSignOut,
+} from '../state/auth';
 import { syncAll } from '../lib/sync';
 
 const GoogleIcon = () => (
@@ -20,12 +25,9 @@ export default function SyncButton() {
   const [status, setStatus] = useState('');
   const syncedFor = useRef<string | null>(null);
 
-  // Phone flow state.
-  const [phone, setPhone] = useState('');
-  const [code, setCode] = useState('');
-  const [phoneStep, setPhoneStep] = useState<'enter' | 'verify'>('enter');
-  const confirmationRef = useRef<ConfirmationResult | null>(null);
-  const verifierRef = useRef<RecaptchaVerifier | null>(null);
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   async function runSync() {
     if (!user) return;
@@ -51,19 +53,10 @@ export default function SyncButton() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  function resetPhone() {
-    setPhone('');
-    setCode('');
-    setPhoneStep('enter');
-    confirmationRef.current = null;
-    verifierRef.current?.clear();
-    verifierRef.current = null;
-  }
-
   function closeModal() {
     setOpen(false);
     setStatus('');
-    resetPhone();
+    setPassword('');
   }
 
   async function handleGoogle() {
@@ -73,48 +66,22 @@ export default function SyncButton() {
       await signInWithGoogle();
       closeModal();
     } catch (e) {
-      setStatus('Google sign-in failed. Please try again.');
+      setStatus(authErrorMessage(e));
       console.error(e);
     } finally {
       setBusy(false);
     }
   }
 
-  async function sendCode() {
-    const num = phone.replace(/[^\d+]/g, '');
-    if (!num.startsWith('+') || num.length < 8) {
-      setStatus('Enter your number with country code, e.g. +15551234567');
-      return;
-    }
+  async function handleEmail() {
     setBusy(true);
     setStatus('');
     try {
-      verifierRef.current?.clear();
-      verifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
-      });
-      confirmationRef.current = await signInWithPhoneNumber(auth, num, verifierRef.current);
-      setPhoneStep('verify');
-      setStatus('Code sent — check your texts.');
-    } catch (e) {
-      setStatus('Could not send the code. Check the number (with country code) and try again.');
-      verifierRef.current?.clear();
-      verifierRef.current = null;
-      console.error(e);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function verifyCode() {
-    if (!confirmationRef.current) return;
-    setBusy(true);
-    setStatus('');
-    try {
-      await confirmationRef.current.confirm(code.trim());
+      if (mode === 'signup') await signUpEmail(email.trim(), password);
+      else await signInEmail(email.trim(), password);
       closeModal();
     } catch (e) {
-      setStatus('That code didn’t match. Try again.');
+      setStatus(authErrorMessage(e));
       console.error(e);
     } finally {
       setBusy(false);
@@ -122,7 +89,7 @@ export default function SyncButton() {
   }
 
   const label = user
-    ? user.displayName?.split(' ')[0] || user.email?.split('@')[0] || user.phoneNumber || 'Account'
+    ? user.displayName?.split(' ')[0] || user.email?.split('@')[0] || 'Account'
     : 'Sign in';
 
   return (
@@ -147,9 +114,7 @@ export default function SyncButton() {
               <>
                 <div>
                   <h2 className="text-lg font-bold">You're signed in</h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {user.email || user.phoneNumber}
-                  </p>
+                  <p className="mt-1 text-sm text-slate-500">{user.email}</p>
                 </div>
                 <button className="btn-primary w-full" onClick={runSync} disabled={busy}>
                   {busy ? 'Syncing…' : 'Sync now'}
@@ -167,7 +132,9 @@ export default function SyncButton() {
             ) : (
               <>
                 <div>
-                  <h2 className="text-lg font-bold">Sign in to PostureLab</h2>
+                  <h2 className="text-lg font-bold">
+                    {mode === 'signup' ? 'Create your account' : 'Sign in to PostureLab'}
+                  </h2>
                   <p className="mt-1 text-sm text-slate-500">
                     Sync your data across your devices.
                   </p>
@@ -183,42 +150,45 @@ export default function SyncButton() {
                 </button>
 
                 <div className="flex items-center gap-3 text-xs text-slate-400">
-                  <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" /> or use your phone
+                  <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" /> or with email
                   <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
                 </div>
 
-                {phoneStep === 'enter' ? (
-                  <div className="space-y-2 text-left">
-                    <input
-                      type="tel"
-                      inputMode="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+1 555 123 4567"
-                      className="input"
-                    />
-                    <button className="btn-primary w-full" onClick={sendCode} disabled={busy}>
-                      {busy ? 'Sending…' : 'Send code'}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-2 text-left">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={code}
-                      onChange={(e) => setCode(e.target.value)}
-                      placeholder="6-digit code"
-                      className="input tracking-widest"
-                    />
-                    <button className="btn-primary w-full" onClick={verifyCode} disabled={busy}>
-                      {busy ? 'Verifying…' : 'Verify & sign in'}
-                    </button>
-                    <button className="btn-ghost w-full" onClick={resetPhone}>
-                      Use a different number
-                    </button>
-                  </div>
-                )}
+                <div className="space-y-2 text-left">
+                  <input
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@email.com"
+                    className="input"
+                  />
+                  <input
+                    type="password"
+                    autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleEmail()}
+                    placeholder="Password"
+                    className="input"
+                  />
+                  <button className="btn-primary w-full" onClick={handleEmail} disabled={busy}>
+                    {busy ? 'Please wait…' : mode === 'signup' ? 'Create account' : 'Sign in'}
+                  </button>
+                </div>
+
+                <button
+                  className="text-xs text-brand-600 hover:underline"
+                  onClick={() => {
+                    setMode((m) => (m === 'signup' ? 'signin' : 'signup'));
+                    setStatus('');
+                  }}
+                >
+                  {mode === 'signup'
+                    ? 'Already have an account? Sign in'
+                    : 'New here? Create an account'}
+                </button>
               </>
             )}
 
@@ -227,8 +197,6 @@ export default function SyncButton() {
                 {status}
               </p>
             )}
-            {/* Invisible reCAPTCHA host for phone auth. */}
-            <div id="recaptcha-container" />
           </div>
         </div>
       )}
