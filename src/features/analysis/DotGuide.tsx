@@ -44,13 +44,14 @@ interface Props {
 }
 
 export default function DotGuide({ view, open, onClose }: Props) {
-  const [failed, setFailed] = useState<Set<string>>(new Set());
+  const [imgOk, setImgOk] = useState(true);
   const [dontShow, setDontShow] = useState(false);
   if (!open) return null;
 
   const rows = PLACEMENTS[view];
   const viewSlug = view === 'lateral' ? 'side' : view === 'anterior' ? 'front' : 'back';
   const viewLabel = view === 'lateral' ? 'Side' : view === 'anterior' ? 'Front' : 'Back';
+  const bigImg = `${import.meta.env.BASE_URL}brand/dots-${viewSlug}.png`;
 
   function handleGotIt() {
     if (dontShow) localStorage.setItem(HIDE_KEY, '1');
@@ -81,33 +82,26 @@ export default function DotGuide({ view, open, onClose }: Props) {
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto p-4">
-          <ul className="space-y-3">
-            {rows.map((r, i) => {
-              const src = `${import.meta.env.BASE_URL}brand/dot-${viewSlug}-${r.slug}.png`;
-              const showImg = !failed.has(r.slug);
-              return (
-                <li key={r.slug} className="flex items-center gap-3">
-                  <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800">
-                    {showImg ? (
-                      <img
-                        src={src}
-                        alt={r.label}
-                        className="h-full w-full object-cover"
-                        onError={() =>
-                          setFailed((prev) => new Set(prev).add(r.slug))
-                        }
-                      />
-                    ) : (
-                      <span className="text-lg font-bold text-amber-500">{i + 1}</span>
-                    )}
-                  </div>
-                  <div className="text-sm">
-                    <span className="font-semibold">{r.label}</span>
-                    <p className="text-slate-500">{r.where}</p>
-                  </div>
-                </li>
-              );
-            })}
+          {imgOk && (
+            <img
+              src={bigImg}
+              alt={`${viewLabel} view dot placement`}
+              className="mx-auto mb-4 w-full rounded-xl object-contain"
+              onError={() => setImgOk(false)}
+            />
+          )}
+          <ul className="space-y-2.5">
+            {rows.map((r, i) => (
+              <li key={r.slug} className="flex gap-3">
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-amber-400 text-xs font-bold text-white">
+                  {i + 1}
+                </span>
+                <div className="text-sm">
+                  <span className="font-semibold">{r.label}</span>
+                  <span className="text-slate-500"> — {r.where}</span>
+                </div>
+              </li>
+            ))}
           </ul>
         </div>
 
