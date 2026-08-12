@@ -3,10 +3,13 @@ import { createPortal } from 'react-dom';
 import type { ViewType } from '../../lib/types';
 
 const HIDE_KEY = 'posturelab-dotguide-hidden';
+const GENDER_KEY = 'posturelab-gender';
 
 export function dotGuideHidden() {
   return localStorage.getItem(HIDE_KEY) === '1';
 }
+
+type Gender = 'female' | 'male';
 
 interface Placement {
   slug: string;
@@ -44,14 +47,22 @@ interface Props {
 }
 
 export default function DotGuide({ view, open, onClose }: Props) {
-  const [imgOk, setImgOk] = useState(true);
+  const [brokenSrc, setBrokenSrc] = useState('');
   const [dontShow, setDontShow] = useState(false);
+  const [gender, setGender] = useState<Gender>(
+    () => (localStorage.getItem(GENDER_KEY) as Gender) || 'female',
+  );
   if (!open) return null;
+
+  function pickGender(g: Gender) {
+    setGender(g);
+    localStorage.setItem(GENDER_KEY, g);
+  }
 
   const rows = PLACEMENTS[view];
   const viewSlug = view === 'lateral' ? 'side' : view === 'anterior' ? 'front' : 'back';
   const viewLabel = view === 'lateral' ? 'Side' : view === 'anterior' ? 'Front' : 'Back';
-  const bigImg = `${import.meta.env.BASE_URL}brand/dots-${viewSlug}.png`;
+  const bigImg = `${import.meta.env.BASE_URL}brand/dots-${viewSlug}-${gender}.png`;
 
   function handleGotIt() {
     if (dontShow) localStorage.setItem(HIDE_KEY, '1');
@@ -82,12 +93,28 @@ export default function DotGuide({ view, open, onClose }: Props) {
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto p-4">
-          {imgOk && (
+          {/* Gender toggle — chooses which reference illustration to show.
+              (Gender does not change the posture score, only the picture.) */}
+          <div className="mx-auto mb-3 flex w-full max-w-[16rem] overflow-hidden rounded-full border border-slate-200 text-sm dark:border-slate-700">
+            <button
+              onClick={() => pickGender('female')}
+              className={`flex-1 py-1.5 ${gender === 'female' ? 'bg-brand-500 text-white' : 'text-slate-600 dark:text-slate-300'}`}
+            >
+              ♀ Female
+            </button>
+            <button
+              onClick={() => pickGender('male')}
+              className={`flex-1 py-1.5 ${gender === 'male' ? 'bg-brand-500 text-white' : 'text-slate-600 dark:text-slate-300'}`}
+            >
+              ♂ Male
+            </button>
+          </div>
+          {brokenSrc !== bigImg && (
             <img
               src={bigImg}
               alt={`${viewLabel} view dot placement`}
               className="mx-auto mb-4 w-full rounded-xl object-contain"
-              onError={() => setImgOk(false)}
+              onError={() => setBrokenSrc(bigImg)}
             />
           )}
           <ul className="space-y-2.5">
