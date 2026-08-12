@@ -29,6 +29,7 @@ export default function PostureEditor({
   const wrapRef = useRef<HTMLDivElement>(null);
   const [dragKey, setDragKey] = useState<keyof Landmarks | null>(null);
   const [hoverKey, setHoverKey] = useState<keyof Landmarks | null>(null);
+  const [zoom, setZoom] = useState(1);
   const overlay = buildOverlay(view, landmarks, metrics);
 
   // The label to show: the point being dragged takes priority over hover.
@@ -55,14 +56,20 @@ export default function PostureEditor({
   }
 
   return (
-    <div
-      ref={wrapRef}
-      className="relative select-none overflow-hidden rounded-xl bg-black touch-none"
-      onPointerMove={onPointerMove}
-      onPointerUp={endDrag}
-      onPointerLeave={endDrag}
-    >
-      <img src={imageUrl} alt="Posture" className="block w-full" draggable={false} />
+    <div className="relative">
+      <div
+        className="overflow-auto rounded-xl bg-black"
+        style={{ maxHeight: readOnly ? undefined : '72vh' }}
+      >
+        <div
+          ref={wrapRef}
+          className="relative select-none"
+          style={{ width: `${zoom * 100}%` }}
+          onPointerMove={onPointerMove}
+          onPointerUp={endDrag}
+          onPointerLeave={endDrag}
+        >
+          <img src={imageUrl} alt="Posture" className="block w-full" draggable={false} />
       <svg
         viewBox="0 0 100 100"
         preserveAspectRatio="none"
@@ -135,6 +142,32 @@ export default function PostureEditor({
           }}
         >
           {LANDMARK_LABELS[activeKey as string] ?? String(activeKey)}
+        </div>
+      )}
+        </div>
+      </div>
+
+      {/* Zoom controls — zoom in to place dots precisely, then pan by dragging
+          an empty area. */}
+      {!readOnly && (
+        <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-slate-900/80 p-1 text-white">
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.max(1, Math.round((z - 0.5) * 10) / 10))}
+            className="grid h-8 w-8 place-items-center rounded-full text-lg hover:bg-white/20"
+            aria-label="Zoom out"
+          >
+            −
+          </button>
+          <span className="w-9 text-center text-xs tabular-nums">{zoom.toFixed(1)}×</span>
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.min(4, Math.round((z + 0.5) * 10) / 10))}
+            className="grid h-8 w-8 place-items-center rounded-full text-lg hover:bg-white/20"
+            aria-label="Zoom in"
+          >
+            +
+          </button>
         </div>
       )}
     </div>

@@ -77,12 +77,12 @@ export default function PainPage() {
       </div>
 
       <div className="card space-y-3 p-4">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block min-w-0 text-sm">
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="block min-w-0 overflow-hidden text-sm">
             <span className="mb-1 block text-slate-500">Date</span>
             <input
               type="date"
-              className="input min-w-0"
+              className="input min-w-0 max-w-full"
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />

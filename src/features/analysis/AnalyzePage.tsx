@@ -12,6 +12,7 @@ import PostureEditor from '../../components/PostureEditor';
 import MetricList from '../../components/MetricList';
 import ScoreRing from '../../components/ScoreRing';
 import CameraCapture from '../capture/CameraCapture';
+import DotGuide, { dotGuideHidden } from './DotGuide';
 
 type Stage = 'pick' | 'edit';
 
@@ -33,6 +34,7 @@ export default function AnalyzePage() {
   const [detecting, setDetecting] = useState(false);
   const [detectMsg, setDetectMsg] = useState<string>('');
   const [showCamera, setShowCamera] = useState(false);
+  const [showDotGuide, setShowDotGuide] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const result = useMemo(() => analyze(view, landmarks), [view, landmarks]);
@@ -65,6 +67,7 @@ export default function AnalyzePage() {
     await img.decode().catch(() => {});
     setImgEl(img);
     setStage('edit');
+    if (!dotGuideHidden()) setShowDotGuide(true);
 
     // Try auto-detection; fall back to manual defaults.
     setDetecting(true);
@@ -227,6 +230,9 @@ export default function AnalyzePage() {
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="text-slate-500">{detectMsg}</span>
               <div className="ml-auto flex gap-2">
+                <button className="btn-ghost" onClick={() => setShowDotGuide(true)}>
+                  ? Dot guide
+                </button>
                 <button className="btn-ghost" onClick={reDetect} disabled={detecting}>
                   {detecting ? 'Detecting…' : 'Re-detect'}
                 </button>
@@ -284,6 +290,8 @@ export default function AnalyzePage() {
           )}
         </>
       )}
+
+      <DotGuide view={view} open={showDotGuide} onClose={() => setShowDotGuide(false)} />
 
       {showCamera && (
         <CameraCapture
