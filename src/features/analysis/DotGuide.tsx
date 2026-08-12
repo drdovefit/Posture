@@ -45,14 +45,15 @@ interface Props {
 
 export default function DotGuide({ view, open, onClose }: Props) {
   const [failed, setFailed] = useState<Set<string>>(new Set());
+  const [dontShow, setDontShow] = useState(false);
   if (!open) return null;
 
   const rows = PLACEMENTS[view];
   const viewSlug = view === 'lateral' ? 'side' : view === 'anterior' ? 'front' : 'back';
   const viewLabel = view === 'lateral' ? 'Side' : view === 'anterior' ? 'Front' : 'Back';
 
-  function dismissForever() {
-    localStorage.setItem(HIDE_KEY, '1');
+  function handleGotIt() {
+    if (dontShow) localStorage.setItem(HIDE_KEY, '1');
     onClose();
   }
 
@@ -110,11 +111,20 @@ export default function DotGuide({ view, open, onClose }: Props) {
           </ul>
         </div>
 
-        <div className="flex gap-2 border-t border-slate-100 p-4 dark:border-slate-800">
-          <button className="btn-ghost flex-1" onClick={dismissForever}>
-            Don't show again
-          </button>
-          <button className="btn-primary flex-1" onClick={onClose}>
+        <div className="space-y-3 border-t border-slate-100 p-4 dark:border-slate-800">
+          <label className="flex items-center gap-2 text-sm text-slate-500">
+            <input
+              type="checkbox"
+              checked={dontShow}
+              onChange={(e) => setDontShow(e.target.checked)}
+              className="h-4 w-4 accent-brand-500"
+            />
+            Don't show this again
+          </label>
+          <button
+            className="btn-primary w-full py-3 text-base font-semibold"
+            onClick={handleGotIt}
+          >
             Got it
           </button>
         </div>
