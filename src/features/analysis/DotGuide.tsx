@@ -8,26 +8,32 @@ export function dotGuideHidden() {
   return localStorage.getItem(HIDE_KEY) === '1';
 }
 
-const PLACEMENTS: Record<ViewType, { label: string; where: string }[]> = {
+interface Placement {
+  slug: string;
+  label: string;
+  where: string;
+}
+
+const PLACEMENTS: Record<ViewType, Placement[]> = {
   lateral: [
-    { label: 'Ear', where: 'On the ear canal (the little opening), level with the sideburn.' },
-    { label: 'Shoulder', where: 'The tip of the shoulder where the arm meets it (the acromion).' },
-    { label: 'Hip', where: 'The bony bump on the side of the hip (greater trochanter).' },
-    { label: 'Knee', where: 'The center of the knee joint, seen from the side.' },
-    { label: 'Ankle', where: 'The ankle bone that sticks out, just above the foot.' },
+    { slug: 'ear', label: 'Ear', where: 'On the tragus — the little flap in front of the ear canal (not the earlobe).' },
+    { slug: 'shoulder', label: 'Shoulder', where: 'The bony tip of the shoulder (acromion), where the shoulder meets the arm.' },
+    { slug: 'hip', label: 'Hip', where: 'The greater trochanter — the bony bump on the outer side of the upper thigh.' },
+    { slug: 'knee', label: 'Knee', where: 'The center of the knee joint line, just behind the kneecap.' },
+    { slug: 'ankle', label: 'Ankle', where: 'The lateral malleolus — the ankle bone that sticks out, just above the foot.' },
   ],
   anterior: [
-    { label: 'Eyes', where: 'The center of each eye — used to check head tilt.' },
-    { label: 'Shoulders', where: 'The top outer edge of each shoulder.' },
-    { label: 'Hips', where: 'The front of each hip bone (level with the waistband).' },
-    { label: 'Knees', where: 'The center of each kneecap.' },
-    { label: 'Ankles', where: 'The center of each ankle, just above the foot.' },
+    { slug: 'eyes', label: 'Eyes', where: 'The center (pupil) of each eye — used to check head tilt.' },
+    { slug: 'shoulders', label: 'Shoulders', where: 'The top outer bony point of each shoulder (acromion).' },
+    { slug: 'hips', label: 'Hips', where: 'The front hip bone (ASIS), level with the top of the pelvis.' },
+    { slug: 'knees', label: 'Knees', where: 'The center of each kneecap (patella).' },
+    { slug: 'ankles', label: 'Ankles', where: 'The center of each ankle (inner ankle bone).' },
   ],
   posterior: [
-    { label: 'Shoulders', where: 'The top outer edge of each shoulder.' },
-    { label: 'Hips', where: 'The top of each hip bone.' },
-    { label: 'Knees', where: 'The back center of each knee.' },
-    { label: 'Ankles', where: 'The center of each ankle.' },
+    { slug: 'shoulders', label: 'Shoulders', where: 'The top outer edge of each shoulder.' },
+    { slug: 'hips', label: 'Hips', where: 'The top of each hip bone.' },
+    { slug: 'knees', label: 'Knees', where: 'The back center of each knee.' },
+    { slug: 'ankles', label: 'Ankles', where: 'The center of each ankle.' },
   ],
 };
 
@@ -38,12 +44,12 @@ interface Props {
 }
 
 export default function DotGuide({ view, open, onClose }: Props) {
-  const [imgOk, setImgOk] = useState(true);
+  const [failed, setFailed] = useState<Set<string>>(new Set());
   if (!open) return null;
 
   const rows = PLACEMENTS[view];
+  const viewSlug = view === 'lateral' ? 'side' : view === 'anterior' ? 'front' : 'back';
   const viewLabel = view === 'lateral' ? 'Side' : view === 'anterior' ? 'Front' : 'Back';
-  const imgSrc = `${import.meta.env.BASE_URL}brand/dots-${view === 'lateral' ? 'side' : view === 'anterior' ? 'front' : 'back'}.png`;
 
   function dismissForever() {
     localStorage.setItem(HIDE_KEY, '1');
@@ -74,26 +80,33 @@ export default function DotGuide({ view, open, onClose }: Props) {
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto p-4">
-          {imgOk && (
-            <img
-              src={imgSrc}
-              alt={`${viewLabel} view dot placement`}
-              className="mx-auto mb-4 max-h-64 rounded-xl object-contain"
-              onError={() => setImgOk(false)}
-            />
-          )}
-          <ul className="space-y-2.5">
-            {rows.map((r, i) => (
-              <li key={r.label} className="flex gap-3">
-                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-amber-400 text-xs font-bold text-white">
-                  {i + 1}
-                </span>
-                <div className="text-sm">
-                  <span className="font-semibold">{r.label}</span>
-                  <span className="text-slate-500"> — {r.where}</span>
-                </div>
-              </li>
-            ))}
+          <ul className="space-y-3">
+            {rows.map((r, i) => {
+              const src = `${import.meta.env.BASE_URL}brand/dot-${viewSlug}-${r.slug}.png`;
+              const showImg = !failed.has(r.slug);
+              return (
+                <li key={r.slug} className="flex items-center gap-3">
+                  <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800">
+                    {showImg ? (
+                      <img
+                        src={src}
+                        alt={r.label}
+                        className="h-full w-full object-cover"
+                        onError={() =>
+                          setFailed((prev) => new Set(prev).add(r.slug))
+                        }
+                      />
+                    ) : (
+                      <span className="text-lg font-bold text-amber-500">{i + 1}</span>
+                    )}
+                  </div>
+                  <div className="text-sm">
+                    <span className="font-semibold">{r.label}</span>
+                    <p className="text-slate-500">{r.where}</p>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </div>
 

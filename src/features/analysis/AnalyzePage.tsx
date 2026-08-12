@@ -172,9 +172,36 @@ export default function AnalyzePage() {
   }
 
   const viewLabel = VIEWS.find((v) => v.id === view)!.label.toLowerCase();
+  const [dragOver, setDragOver] = useState(false);
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const f = Array.from(e.dataTransfer.files).find((file) =>
+      file.type.startsWith('image/'),
+    );
+    if (f) loadBlob(f);
+  }
 
   return (
-    <div className="space-y-4">
+    <div
+      className="relative space-y-4"
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragOver(true);
+      }}
+      onDragLeave={(e) => {
+        if (e.currentTarget === e.target) setDragOver(false);
+      }}
+      onDrop={onDrop}
+    >
+      {dragOver && (
+        <div className="pointer-events-none fixed inset-0 z-40 grid place-items-center bg-brand-500/20 backdrop-blur-sm">
+          <div className="rounded-2xl border-2 border-dashed border-brand-500 bg-white px-8 py-6 text-lg font-semibold text-brand-700 shadow-lg dark:bg-slate-900">
+            Drop your photo to analyze
+          </div>
+        </div>
+      )}
       <h1 className="text-2xl font-bold">New analysis</h1>
 
       {/* View selector — pick which view, then add a photo for it. */}
@@ -219,7 +246,7 @@ export default function AnalyzePage() {
                 relaxed. It’s auto-detected the moment you add it.
               </p>
               <p className="text-xs text-slate-400">
-                Tip: you can also paste a copied image with ⌘/Ctrl + V.
+                Tip: you can also paste (⌘/Ctrl + V) or drag &amp; drop an image.
               </p>
               <div className="flex flex-wrap gap-3">
                 <button className="btn-primary" onClick={() => fileRef.current?.click()}>
