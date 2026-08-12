@@ -94,6 +94,28 @@ export default function AnalyzePage() {
     if (f) loadBlob(f);
   }
 
+  // Paste an image from the clipboard (Cmd/Ctrl+V) to start an analysis.
+  const loadBlobRef = useRef(loadBlob);
+  loadBlobRef.current = loadBlob;
+  useEffect(() => {
+    function onPaste(e: ClipboardEvent) {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          const blob = items[i].getAsFile();
+          if (blob) {
+            e.preventDefault();
+            loadBlobRef.current(blob);
+            break;
+          }
+        }
+      }
+    }
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, []);
+
   async function reDetect() {
     if (!imgEl) return;
     setDetecting(true);
@@ -195,6 +217,9 @@ export default function AnalyzePage() {
               <p className="text-sm text-slate-500">
                 Full-body photo, plain background, camera at hip height, standing
                 relaxed. It’s auto-detected the moment you add it.
+              </p>
+              <p className="text-xs text-slate-400">
+                Tip: you can also paste a copied image with ⌘/Ctrl + V.
               </p>
               <div className="flex flex-wrap gap-3">
                 <button className="btn-primary" onClick={() => fileRef.current?.click()}>
