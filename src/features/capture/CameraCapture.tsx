@@ -177,7 +177,7 @@ export default function CameraCapture({ view, onCapture, onClose }: Props) {
           <img
             src={frames[index].url}
             alt=""
-            className="h-full w-full object-contain"
+            className="h-full w-full object-cover"
           />
           <div className="pointer-events-none absolute left-1/2 top-0 h-full w-px -translate-x-1/2 border-l-2 border-dashed border-yellow-300/70" />
           <div className="absolute inset-x-0 top-4 text-center">
@@ -232,7 +232,7 @@ export default function CameraCapture({ view, onCapture, onClose }: Props) {
               ref={videoRef}
               playsInline
               muted
-              className="h-full w-full object-contain"
+              className="h-full w-full object-cover"
               style={{ transform: facing === 'user' ? 'scaleX(-1)' : undefined }}
             />
             <div className="pointer-events-none absolute inset-0">

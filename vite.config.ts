@@ -7,6 +7,7 @@ export default defineConfig({
   base: process.env.VITE_BASE || '/',
   define: {
     __BUILD_ID__: JSON.stringify(new Date().toISOString().replace('T', ' ').slice(0, 16)),
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '1.0.0'),
   },
   plugins: [
     react(),

@@ -124,6 +124,19 @@ export default function AnalyzePage() {
     navigate('/history');
   }
 
+  async function downloadImage() {
+    if (!imgEl) return;
+    const blob = await renderAnnotated(imgEl, view, landmarks, result.metrics);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `posturelab-${view}-${new Date().toISOString().slice(0, 10)}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   function reset() {
     setStage('pick');
     setLandmarks({});
@@ -238,6 +251,9 @@ export default function AnalyzePage() {
             </div>
             <button className="btn-primary w-full" onClick={save} disabled={activeId == null}>
               Save assessment
+            </button>
+            <button className="btn-ghost w-full" onClick={downloadImage}>
+              ⬇ Download image
             </button>
           </div>
           </div>

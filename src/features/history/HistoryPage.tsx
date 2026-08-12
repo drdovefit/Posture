@@ -58,6 +58,13 @@ function Row({ a, client }: { a: Assessment; client: Client | null }) {
             >
               Export PDF
             </button>
+            <a
+              className="btn-ghost !py-1 text-xs"
+              href={url}
+              download={`posturelab-${a.view}-${new Date(a.createdAt).toISOString().slice(0, 10)}.png`}
+            >
+              ⬇ Image
+            </a>
             <button
               className="btn-ghost !py-1 text-xs !text-red-600"
               onClick={() => a.id && confirm('Delete this assessment?') && deleteAssessment(a.id)}
