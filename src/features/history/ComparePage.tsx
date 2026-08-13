@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../lib/db';
 import { useActiveClient } from '../../state/useClient';
@@ -53,8 +53,18 @@ export default function ComparePage() {
   const [leftId, setLeftId] = useState<number | null>(null);
   const [rightId, setRightId] = useState<number | null>(null);
 
-  const left = assessments?.find((a) => a.id === leftId) ?? assessments?.[assessments.length - 1];
-  const right = assessments?.find((a) => a.id === rightId) ?? assessments?.[0];
+  // Default to oldest (Before) and newest (After) once data loads — and keep
+  // them distinct so both panels never resolve to the same assessment.
+  useEffect(() => {
+    if (!assessments || assessments.length < 2) return;
+    const oldest = assessments[assessments.length - 1].id!;
+    const newest = assessments[0].id!;
+    setLeftId((cur) => (cur != null && assessments.some((a) => a.id === cur) ? cur : oldest));
+    setRightId((cur) => (cur != null && assessments.some((a) => a.id === cur) ? cur : newest));
+  }, [assessments]);
+
+  const left = assessments?.find((a) => a.id === leftId);
+  const right = assessments?.find((a) => a.id === rightId);
 
   const delta = useMemo(() => {
     if (!left || !right) return null;
