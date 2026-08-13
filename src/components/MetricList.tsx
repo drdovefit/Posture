@@ -1,4 +1,5 @@
 import type { Metric } from '../lib/types';
+import { metricPhrase } from '../lib/measure/feedback';
 
 const sevChip: Record<string, string> = {
   good: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300',
@@ -21,7 +22,10 @@ export default function MetricList({ metrics }: { metrics: Metric[] }) {
               <span className={`chip ${sevChip[m.severity]}`}>{sevLabel[m.severity]}</span>
             </div>
           </div>
-          <p className="mt-1 text-sm text-slate-500">{m.explanation}</p>
+          <p className="mt-1 text-sm text-slate-500">
+            <span className="font-medium text-slate-600 dark:text-slate-300">{metricPhrase(m)}</span>{' '}
+            {m.explanation}
+          </p>
           <p className="mt-0.5 text-xs text-slate-400">Normal: {m.normal}</p>
         </li>
       ))}

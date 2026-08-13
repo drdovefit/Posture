@@ -6,6 +6,7 @@ import { detectPose } from '../../lib/pose/landmarker';
 import { defaultLandmarks, mapLandmarks } from '../../lib/pose/mapping';
 import { renderAnnotated } from '../../lib/report/renderAnnotated';
 import { getSuggestions } from '../../lib/measure/suggestions';
+import { scoreFeedback } from '../../lib/measure/feedback';
 import { saveAssessment } from '../../lib/db';
 import { useActiveClient } from '../../state/useClient';
 import PostureEditor from '../../components/PostureEditor';
@@ -298,9 +299,9 @@ export default function AnalyzePage() {
           <div className="space-y-4">
             <div className="card flex items-center gap-4 p-4">
               <ScoreRing score={result.score} size={96} />
-              <div className="text-sm text-slate-500">
-                Weighted from {result.metrics.length} measurements. Higher is
-                closer to a neutral, balanced posture.
+              <div className="text-sm">
+                <div className="font-semibold">{scoreFeedback(result.score).title}</div>
+                <p className="mt-0.5 text-slate-500">{scoreFeedback(result.score).detail}</p>
               </div>
             </div>
             <div className="card p-4">
