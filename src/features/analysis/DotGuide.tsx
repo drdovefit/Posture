@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ViewType } from '../../lib/types';
 
@@ -17,7 +17,7 @@ interface Placement {
   where: string;
 }
 
-const PLACEMENTS: Record<ViewType, Placement[]> = {
+const PLACEMENTS: Record<'lateral' | 'anterior', Placement[]> = {
   lateral: [
     { slug: 'ear', label: 'Ear', where: 'On the tragus — the little flap in front of the ear canal (not the earlobe).' },
     { slug: 'shoulder', label: 'Shoulder', where: 'The bony tip of the shoulder (acromion), where the shoulder meets the arm.' },
@@ -31,12 +31,6 @@ const PLACEMENTS: Record<ViewType, Placement[]> = {
     { slug: 'hips', label: 'Hips', where: 'The front hip bone (ASIS), level with the top of the pelvis.' },
     { slug: 'knees', label: 'Knees', where: 'The center of each kneecap (patella).' },
     { slug: 'ankles', label: 'Ankles', where: 'The center of each ankle (inner ankle bone).' },
-  ],
-  posterior: [
-    { slug: 'shoulders', label: 'Shoulders', where: 'The top outer edge of each shoulder.' },
-    { slug: 'hips', label: 'Hips', where: 'The top of each hip bone.' },
-    { slug: 'knees', label: 'Knees', where: 'The back center of each knee.' },
-    { slug: 'ankles', label: 'Ankles', where: 'The center of each ankle.' },
   ],
 };
 
@@ -52,6 +46,15 @@ export default function DotGuide({ view, open, onClose }: Props) {
   const [gender, setGender] = useState<Gender>(
     () => (localStorage.getItem(GENDER_KEY) as Gender) || 'female',
   );
+  // Which view the guide is showing — starts from the analyze view but can be
+  // switched inside the guide.
+  const [localView, setLocalView] = useState<'lateral' | 'anterior'>(
+    view === 'anterior' ? 'anterior' : 'lateral',
+  );
+  useEffect(() => {
+    if (open) setLocalView(view === 'anterior' ? 'anterior' : 'lateral');
+  }, [open, view]);
+
   if (!open) return null;
 
   function pickGender(g: Gender) {
@@ -59,15 +62,19 @@ export default function DotGuide({ view, open, onClose }: Props) {
     localStorage.setItem(GENDER_KEY, g);
   }
 
-  const rows = PLACEMENTS[view];
-  const viewSlug = view === 'lateral' ? 'side' : view === 'anterior' ? 'front' : 'back';
-  const viewLabel = view === 'lateral' ? 'Side' : view === 'anterior' ? 'Front' : 'Back';
+  const rows = PLACEMENTS[localView];
+  const viewSlug = localView === 'lateral' ? 'side' : 'front';
   const bigImg = `${import.meta.env.BASE_URL}brand/dots-${viewSlug}-${gender}.png`;
 
   function handleGotIt() {
     if (dontShow) localStorage.setItem(HIDE_KEY, '1');
     onClose();
   }
+
+  const seg =
+    'flex-1 py-1.5 text-sm transition-colors';
+  const segOn = 'bg-brand-500 text-white';
+  const segOff = 'text-slate-600 dark:text-slate-300';
 
   return createPortal(
     <div className="fixed inset-0 z-[70] grid place-items-center bg-black/70 p-4" onClick={onClose}>
@@ -77,7 +84,7 @@ export default function DotGuide({ view, open, onClose }: Props) {
       >
         <div className="flex items-start justify-between gap-2 border-b border-slate-100 p-4 dark:border-slate-800">
           <div>
-            <h2 className="text-lg font-bold">Check your dots ({viewLabel} view)</h2>
+            <h2 className="text-lg font-bold">Check your dots</h2>
             <p className="text-sm text-slate-500">
               For an accurate score, drag each dot to the exact spot. Zoom in with
               the + button for precision.
@@ -92,27 +99,31 @@ export default function DotGuide({ view, open, onClose }: Props) {
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto p-4">
-          {/* Gender toggle — chooses which reference illustration to show.
-              (Gender does not change the posture score, only the picture.) */}
-          <div className="mx-auto mb-3 flex w-full max-w-[16rem] overflow-hidden rounded-full border border-slate-200 text-sm dark:border-slate-700">
-            <button
-              onClick={() => pickGender('female')}
-              className={`flex-1 py-1.5 ${gender === 'female' ? 'bg-brand-500 text-white' : 'text-slate-600 dark:text-slate-300'}`}
-            >
+        {/* Toggles: view on the left, gender on the right. */}
+        <div className="flex gap-2 border-b border-slate-100 p-3 dark:border-slate-800">
+          <div className="flex flex-1 overflow-hidden rounded-full border border-slate-200 dark:border-slate-700">
+            <button className={`${seg} ${localView === 'lateral' ? segOn : segOff}`} onClick={() => setLocalView('lateral')}>
+              Side
+            </button>
+            <button className={`${seg} ${localView === 'anterior' ? segOn : segOff}`} onClick={() => setLocalView('anterior')}>
+              Front
+            </button>
+          </div>
+          <div className="flex flex-1 overflow-hidden rounded-full border border-slate-200 dark:border-slate-700">
+            <button className={`${seg} ${gender === 'female' ? segOn : segOff}`} onClick={() => pickGender('female')}>
               ♀ Female
             </button>
-            <button
-              onClick={() => pickGender('male')}
-              className={`flex-1 py-1.5 ${gender === 'male' ? 'bg-brand-500 text-white' : 'text-slate-600 dark:text-slate-300'}`}
-            >
+            <button className={`${seg} ${gender === 'male' ? segOn : segOff}`} onClick={() => pickGender('male')}>
               ♂ Male
             </button>
           </div>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-auto p-4">
           {brokenSrc !== bigImg && (
             <img
               src={bigImg}
-              alt={`${viewLabel} view dot placement`}
+              alt={`${viewSlug} view dot placement`}
               className="mx-auto mb-4 w-full rounded-xl object-contain"
               onError={() => setBrokenSrc(bigImg)}
             />
