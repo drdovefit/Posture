@@ -107,6 +107,20 @@ export default function ComparePage() {
         </div>
       </div>
 
+      <div className="flex justify-center">
+        <button
+          className="btn-ghost"
+          onClick={() => {
+            const l = left?.id ?? null;
+            const r = right?.id ?? null;
+            setLeftId(r);
+            setRightId(l);
+          }}
+        >
+          ⇅ Swap before / after
+        </button>
+      </div>
+
       {delta !== null && (
         <div className="card flex items-center justify-center gap-3 p-4 text-center">
           <span className="text-slate-500">Change in score:</span>
