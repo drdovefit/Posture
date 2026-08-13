@@ -39,6 +39,11 @@ export default function CameraCapture({ view, onCapture, onClose }: Props) {
   const [countdown, setCountdown] = useState(0);
   const [recording, setRecording] = useState(false);
   const [frameCount, setFrameCount] = useState(0);
+  // Camera zoom: 1×/2× are digital (preview only); 0.5× switches to the
+  // device's ultra-wide lens when one exists.
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [ultraWideId, setUltraWideId] = useState<string | null>(null);
+  const deviceIdRef = useRef<string | undefined>(undefined);
 
   // Review state (after recording).
   const [reviewing, setReviewing] = useState(false);
@@ -62,22 +67,45 @@ export default function CameraCapture({ view, onCapture, onClose }: Props) {
           'Camera at hip height, ~3 m away, held level.',
         ];
 
-  async function startStream(f: Facing) {
+  async function startStream(f: Facing, deviceId?: string) {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: f, width: { ideal: 1280 }, height: { ideal: 1920 } },
-        audio: false,
-      });
+      const video: MediaTrackConstraints = deviceId
+        ? { deviceId: { exact: deviceId } }
+        : { facingMode: f, width: { ideal: 1920 }, height: { ideal: 1080 } };
+      const stream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
       streamRef.current = stream;
+      deviceIdRef.current = stream.getVideoTracks()[0]?.getSettings().deviceId;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play().catch(() => {});
       }
+      // Detect an ultra-wide back lens once (labels only appear after grant).
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const uw = devices.find(
+        (d) => d.kind === 'videoinput' && /ultra|wide/i.test(d.label) && !/front|face/i.test(d.label),
+      );
+      setUltraWideId(uw?.deviceId ?? null);
     } catch {
       setError('Camera unavailable. Check permissions or upload a photo instead.');
     }
   }
+
+  function pickZoom(level: number) {
+    setZoomLevel(level);
+    if (level === 0.5) {
+      if (ultraWideId) startStream(facing, ultraWideId);
+      return;
+    }
+    // 1× / 2×: make sure we're on the normal lens (not still ultra-wide);
+    // the 2× is then applied digitally via the video transform.
+    if (ultraWideId && deviceIdRef.current === ultraWideId) startStream(facing);
+  }
+
+  // Digital-zoom transform for the preview (1× and 2×); the front camera is
+  // also mirrored. 0.5× uses a real wider lens, so no digital scale.
+  const digital = zoomLevel >= 1 ? zoomLevel : 1;
+  const previewTransform = `scaleX(${facing === 'user' ? -digital : digital}) scaleY(${digital})`;
 
   useEffect(() => {
     if (!reviewing) startStream(facing);
@@ -233,8 +261,29 @@ export default function CameraCapture({ view, onCapture, onClose }: Props) {
               playsInline
               muted
               className="h-full w-full object-cover"
-              style={{ transform: facing === 'user' ? 'scaleX(-1)' : undefined }}
+              style={{ transform: previewTransform, transformOrigin: 'center' }}
             />
+            {/* Flip camera — top-right icon (standard camera placement). */}
+            <button
+              onClick={() => setFacing((f) => (f === 'user' ? 'environment' : 'user'))}
+              className="absolute right-4 top-16 grid h-10 w-10 place-items-center rounded-full bg-black/60 text-lg text-white"
+              aria-label="Flip camera"
+              title="Flip camera"
+            >
+              ⟲
+            </button>
+            {/* Zoom selector */}
+            <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1 rounded-full bg-black/60 p-1 text-sm text-white">
+              {(ultraWideId ? [0.5, 1, 2] : [1, 2]).map((z) => (
+                <button
+                  key={z}
+                  onClick={() => pickZoom(z)}
+                  className={`h-8 w-11 rounded-full ${zoomLevel === z ? 'bg-white text-slate-900' : ''}`}
+                >
+                  {z}×
+                </button>
+              ))}
+            </div>
             <div className="pointer-events-none absolute inset-0">
               <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 border-l-2 border-dashed border-yellow-300/70" />
               <div className="absolute inset-x-0 top-4 flex flex-col items-center gap-1">
@@ -351,13 +400,8 @@ export default function CameraCapture({ view, onCapture, onClose }: Props) {
             />
           )}
 
-          <button
-            className="btn-ghost !bg-slate-800 !text-white"
-            onClick={() => setFacing((f) => (f === 'user' ? 'environment' : 'user'))}
-            title="Flip camera"
-          >
-            ⟲ Flip
-          </button>
+          {/* Spacer to keep the shutter centred (flip moved to top-right). */}
+          <span className="w-16" />
         </div>
       </div>
     </div>
