@@ -5,6 +5,7 @@ import {
   signInWithGoogle,
   signInEmail,
   signUpEmail,
+  resetPassword,
   authErrorMessage,
   doSignOut,
 } from '../state/auth';
@@ -81,6 +82,24 @@ export default function SyncButton() {
       if (mode === 'signup') await signUpEmail(email.trim(), password);
       else await signInEmail(email.trim(), password);
       closeModal();
+    } catch (e) {
+      setStatus(authErrorMessage(e));
+      console.error(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleReset() {
+    if (!email.trim()) {
+      setStatus('Enter your email above, then tap “Forgot password?” again.');
+      return;
+    }
+    setBusy(true);
+    setStatus('');
+    try {
+      await resetPassword(email.trim());
+      setStatus(`Password reset link sent to ${email.trim()} — check your inbox and spam.`);
     } catch (e) {
       setStatus(authErrorMessage(e));
       console.error(e);
@@ -188,17 +207,28 @@ export default function SyncButton() {
                   </button>
                 </div>
 
-                <button
-                  className="text-xs text-brand-600 hover:underline"
-                  onClick={() => {
-                    setMode((m) => (m === 'signup' ? 'signin' : 'signup'));
-                    setStatus('');
-                  }}
-                >
-                  {mode === 'signup'
-                    ? 'Already have an account? Sign in'
-                    : 'New here? Create an account'}
-                </button>
+                <div className="flex flex-col items-center gap-1">
+                  {mode === 'signin' && (
+                    <button
+                      className="text-xs text-brand-600 hover:underline"
+                      onClick={handleReset}
+                      disabled={busy}
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                  <button
+                    className="text-xs text-brand-600 hover:underline"
+                    onClick={() => {
+                      setMode((m) => (m === 'signup' ? 'signin' : 'signup'));
+                      setStatus('');
+                    }}
+                  >
+                    {mode === 'signup'
+                      ? 'Already have an account? Sign in'
+                      : 'New here? Create an account'}
+                  </button>
+                </div>
               </>
             )}
 

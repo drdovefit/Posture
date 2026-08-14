@@ -4,6 +4,7 @@ import {
   signInWithGoogle,
   signInEmail,
   signUpEmail,
+  resetPassword,
   authErrorMessage,
 } from '../state/auth';
 
@@ -31,7 +32,28 @@ interface Props {
 export default function SignInModal({ title, subtitle, onSignedIn, onClose }: Props) {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
+  const [statusOk, setStatusOk] = useState(false);
   const [mode, setMode] = useState<'signin' | 'signup'>('signup');
+
+  async function handleReset() {
+    if (!email.trim()) {
+      setStatusOk(false);
+      setStatus('Enter your email above, then tap “Forgot password?” again.');
+      return;
+    }
+    setBusy(true);
+    setStatus('');
+    try {
+      await resetPassword(email.trim());
+      setStatusOk(true);
+      setStatus(`Password reset link sent to ${email.trim()} — check your inbox and spam.`);
+    } catch (e) {
+      setStatusOk(false);
+      setStatus(authErrorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -42,6 +64,7 @@ export default function SignInModal({ title, subtitle, onSignedIn, onClose }: Pr
       await signInWithGoogle();
       onSignedIn();
     } catch (e) {
+      setStatusOk(false);
       setStatus(authErrorMessage(e));
       console.error(e);
     } finally {
@@ -57,6 +80,7 @@ export default function SignInModal({ title, subtitle, onSignedIn, onClose }: Pr
       else await signInEmail(email.trim(), password);
       onSignedIn();
     } catch (e) {
+      setStatusOk(false);
       setStatus(authErrorMessage(e));
       console.error(e);
     } finally {
@@ -127,20 +151,37 @@ export default function SignInModal({ title, subtitle, onSignedIn, onClose }: Pr
           </button>
         </div>
 
-        <button
-          className="text-xs text-brand-600 hover:underline"
-          onClick={() => {
-            setMode((m) => (m === 'signup' ? 'signin' : 'signup'));
-            setStatus('');
-          }}
-        >
-          {mode === 'signup'
-            ? 'Already have an account? Sign in'
-            : 'New here? Create an account'}
-        </button>
+        <div className="flex flex-col items-center gap-1">
+          {mode === 'signin' && (
+            <button
+              className="text-xs text-brand-600 hover:underline"
+              onClick={handleReset}
+              disabled={busy}
+            >
+              Forgot password?
+            </button>
+          )}
+          <button
+            className="text-xs text-brand-600 hover:underline"
+            onClick={() => {
+              setMode((m) => (m === 'signup' ? 'signin' : 'signup'));
+              setStatus('');
+            }}
+          >
+            {mode === 'signup'
+              ? 'Already have an account? Sign in'
+              : 'New here? Create an account'}
+          </button>
+        </div>
 
         {status && (
-          <p className="rounded-lg border border-red-200 bg-red-50 p-2 text-sm font-medium text-red-700">
+          <p
+            className={`rounded-lg border p-2 text-sm font-medium ${
+              statusOk
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : 'border-red-200 bg-red-50 text-red-700'
+            }`}
+          >
             {status}
           </p>
         )}

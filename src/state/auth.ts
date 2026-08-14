@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signInWithRedirect,
@@ -44,6 +45,11 @@ export async function signInEmail(email: string, password: string) {
 
 export async function signUpEmail(email: string, password: string) {
   await createUserWithEmailAndPassword(auth, email, password);
+}
+
+/** Email the user a link to reset their password. */
+export async function resetPassword(email: string) {
+  await sendPasswordResetEmail(auth, email);
 }
 
 /** Turn a Firebase auth error code into a friendly message. */

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   Area,
@@ -11,6 +11,8 @@ import {
 } from 'recharts';
 import { addPain, db, deletePain } from '../../lib/db';
 import { useActiveClient } from '../../state/useClient';
+
+const NOTES_MAX = 200;
 
 const REGIONS = [
   'Neck',
@@ -59,6 +61,27 @@ export default function PainPage() {
   const [severity, setSeverity] = useState(3);
   const [notes, setNotes] = useState('');
 
+  // Free-moving slider that snaps to the nearest whole number on release.
+  const [dragging, setDragging] = useState(false);
+  const [sliderPos, setSliderPos] = useState(3);
+  const posRef = useRef(3);
+
+  // Notes textarea grows with content up to ~3 lines, then scrolls.
+  const notesRef = useRef<HTMLTextAreaElement>(null);
+  function growNotes() {
+    const el = notesRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 96)}px`;
+  }
+  const sliderVal = dragging ? sliderPos : severity;
+  function commitSeverity() {
+    const v = Math.round(posRef.current);
+    setSeverity(v);
+    setSliderPos(v);
+    setDragging(false);
+  }
+
   // Selection mode for bulk-deleting entries.
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -101,7 +124,11 @@ export default function PainPage() {
     });
     setNotes('');
     setSeverity(3);
+    setSliderPos(3);
+    posRef.current = 3;
+    setDragging(false);
     setCustomRegion('');
+    requestAnimationFrame(growNotes);
   }
 
   const chartData = [...(entries ?? [])]
@@ -156,29 +183,50 @@ export default function PainPage() {
         <label className="block text-sm">
           <span className="mb-1 flex justify-between text-slate-500">
             <span>Severity</span>
-            <span className={`font-bold ${sevColor(severity)}`}>{severity}/10</span>
+            <span className={`font-bold ${sevColor(Math.round(sliderVal))}`}>
+              {Math.round(sliderVal)}/10
+            </span>
           </span>
           <input
             type="range"
             min={0}
             max={10}
-            step={1}
-            value={severity}
-            onChange={(e) => setSeverity(Number(e.target.value))}
+            step="any"
+            value={sliderVal}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              posRef.current = v;
+              setSliderPos(v);
+              setDragging(true);
+            }}
+            onPointerUp={commitSeverity}
+            onPointerCancel={commitSeverity}
+            onTouchEnd={commitSeverity}
+            onKeyUp={commitSeverity}
+            onBlur={commitSeverity}
             className="range"
             style={{
-              background: `linear-gradient(to right, #0ea5e9 ${(severity / 10) * 100}%, #e2e8f0 ${
-                (severity / 10) * 100
+              background: `linear-gradient(to right, #0ea5e9 ${(sliderVal / 10) * 100}%, #e2e8f0 ${
+                (sliderVal / 10) * 100
               }%)`,
             }}
           />
         </label>
         <label className="block text-sm">
-          <span className="mb-1 block text-slate-500">Notes (optional)</span>
-          <input
-            className="input"
+          <span className="mb-1 flex items-center justify-between text-slate-500">
+            <span>Notes (optional)</span>
+            <span className="text-xs text-slate-400">{notes.length}/{NOTES_MAX}</span>
+          </span>
+          <textarea
+            ref={notesRef}
+            rows={1}
+            maxLength={NOTES_MAX}
+            className="input max-h-24 resize-none overflow-auto"
             value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            onChange={(e) => {
+              setNotes(e.target.value);
+              growNotes();
+            }}
             placeholder="e.g. worse after sitting all day"
           />
         </label>
@@ -291,7 +339,9 @@ export default function PainPage() {
                     <span className="font-medium">{e.region}</span>
                     <span className="text-xs text-slate-500">{niceDate(e.date)}</span>
                   </div>
-                  {e.notes && <p className="truncate text-sm text-slate-500">{e.notes}</p>}
+                  {e.notes && (
+                  <p className="line-clamp-3 text-sm text-slate-500">{e.notes}</p>
+                )}
                 </div>
                 {!selecting && (
                   <button
