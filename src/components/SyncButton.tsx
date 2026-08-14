@@ -8,6 +8,7 @@ import {
   resetPassword,
   authErrorMessage,
   doSignOut,
+  updateDisplayName,
 } from '../state/auth';
 import { syncAll } from '../lib/sync';
 import {
@@ -39,6 +40,29 @@ export default function SyncButton() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+
+  // Editable display name (mirrors the signed-in user's profile name).
+  const [nameInput, setNameInput] = useState('');
+  const [savedName, setSavedName] = useState<string | null>(null);
+  useEffect(() => {
+    setNameInput(user?.displayName ?? '');
+    setSavedName(user?.displayName ?? null);
+  }, [user]);
+
+  async function handleSaveName() {
+    setBusy(true);
+    setStatus('');
+    try {
+      await updateDisplayName(nameInput.trim());
+      setSavedName(nameInput.trim() || null);
+      setStatus('Name updated ✓');
+    } catch (e) {
+      setStatus(authErrorMessage(e));
+      console.error(e);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   // Tick once a second so the reset cooldown countdown stays live.
   const [, setTick] = useState(0);
@@ -148,7 +172,7 @@ export default function SyncButton() {
   }
 
   const label = user
-    ? user.displayName?.split(' ')[0] || user.email?.split('@')[0] || 'Account'
+    ? savedName?.split(' ')[0] || user.email?.split('@')[0] || 'Account'
     : 'Sign in';
 
   return (
@@ -183,6 +207,27 @@ export default function SyncButton() {
                 <div>
                   <h2 className="text-lg font-bold">You're signed in</h2>
                   <p className="mt-1 text-sm text-slate-500">{user.email}</p>
+                </div>
+                <div className="text-left">
+                  <label className="mb-1 block text-xs font-medium text-slate-500">
+                    Display name
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      className="input"
+                      value={nameInput}
+                      onChange={(e) => setNameInput(e.target.value)}
+                      placeholder="Your name"
+                      maxLength={40}
+                    />
+                    <button
+                      className="btn-ghost shrink-0"
+                      onClick={handleSaveName}
+                      disabled={busy || nameInput.trim() === (savedName ?? '')}
+                    >
+                      Save
+                    </button>
+                  </div>
                 </div>
                 <button className="btn-primary w-full" onClick={runSync} disabled={busy}>
                   {busy ? 'Syncing…' : 'Sync now'}

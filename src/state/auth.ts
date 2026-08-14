@@ -7,6 +7,7 @@ import {
   signInWithPopup,
   signInWithRedirect,
   signOut,
+  updateProfile,
   type User,
 } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
@@ -87,4 +88,10 @@ export function authErrorMessage(err: unknown): string {
 
 export async function doSignOut() {
   await signOut(auth);
+}
+
+/** Update the signed-in user's display name. */
+export async function updateDisplayName(name: string) {
+  if (!auth.currentUser) return;
+  await updateProfile(auth.currentUser, { displayName: name });
 }
