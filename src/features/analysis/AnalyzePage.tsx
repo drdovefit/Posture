@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import type { Landmarks, Point, ViewType } from '../../lib/types';
 import { analyze } from '../../lib/measure';
 import { detectPose } from '../../lib/pose/landmarker';
@@ -7,13 +7,11 @@ import { defaultLandmarks, mapLandmarks } from '../../lib/pose/mapping';
 import { renderAnnotated } from '../../lib/report/renderAnnotated';
 import { getSuggestions } from '../../lib/measure/suggestions';
 import { scoreFeedback } from '../../lib/measure/feedback';
-import { saveAssessment } from '../../lib/db';
+import { db, saveAssessment } from '../../lib/db';
 import { useActiveClient } from '../../state/useClient';
-import { useAuth } from '../../state/auth';
 import PostureEditor from '../../components/PostureEditor';
 import MetricList from '../../components/MetricList';
 import ScoreRing from '../../components/ScoreRing';
-import SignInModal from '../../components/SignInModal';
 import CameraCapture from '../capture/CameraCapture';
 import DotGuide, { dotGuideHidden } from './DotGuide';
 
@@ -26,10 +24,12 @@ const VIEWS: { id: ViewType; label: string; hint: string }[] = [
 
 export default function AnalyzePage() {
   const { activeId } = useActiveClient();
-  const { user } = useAuth();
-  const [showSignIn, setShowSignIn] = useState(false);
-  const pendingSave = useRef(false);
-  const navigate = useNavigate();
+
+  // Auto-save: the assessment being edited is created once, then updated in
+  // place on every change — no manual Save needed.
+  const currentId = useRef<number | null>(null);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const [savedState, setSavedState] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   const [view, setView] = useState<ViewType>('lateral');
   const [stage, setStage] = useState<Stage>('pick');
@@ -52,15 +52,39 @@ export default function AnalyzePage() {
     };
   }, [imageUrl]);
 
-  // After a sign-in triggered by the Save button, complete the save once the
-  // auth state has propagated to this component.
+  // Auto-save (debounced): create the assessment on first change, then update it
+  // in place as the photo, view, or landmarks change. Local-first — no login.
   useEffect(() => {
-    if (user && pendingSave.current) {
-      pendingSave.current = false;
-      save();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+    if (stage !== 'edit' || !imgEl || !imageBlob || activeId == null) return;
+    if (Object.keys(landmarks).length === 0) return;
+    setSavedState('saving');
+    clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(async () => {
+      try {
+        const annotated = await renderAnnotated(imgEl, view, landmarks, result.metrics);
+        const data = {
+          clientId: activeId,
+          view,
+          photo: imageBlob,
+          annotated,
+          imageWidth: imgEl.naturalWidth,
+          imageHeight: imgEl.naturalHeight,
+          landmarks,
+          metrics: result.metrics,
+          score: result.score,
+        };
+        if (currentId.current == null) {
+          currentId.current = (await saveAssessment({ createdAt: Date.now(), ...data })) as number;
+        } else {
+          await db.assessments.update(currentId.current, data);
+        }
+        setSavedState('saved');
+      } catch {
+        setSavedState('idle');
+      }
+    }, 800);
+    return () => clearTimeout(autosaveTimer.current);
+  }, [landmarks, view, imgEl, imageBlob, activeId, result.metrics, result.score, stage]);
 
   // When the view is switched while editing, re-map landmarks for the new view.
   const firstRun = useRef(true);
@@ -74,6 +98,9 @@ export default function AnalyzePage() {
   }, [view]);
 
   async function loadBlob(blob: Blob) {
+    // A brand-new photo starts a new assessment record.
+    currentId.current = null;
+    setSavedState('idle');
     const url = URL.createObjectURL(blob);
     setImageBlob(blob);
     setImageUrl(url);
@@ -195,29 +222,6 @@ export default function AnalyzePage() {
     }
   }
 
-  async function save() {
-    if (!imageBlob || !imgEl || activeId == null) return;
-    // Require an account before saving, so results sync and aren't lost.
-    if (!user) {
-      setShowSignIn(true);
-      return;
-    }
-    const annotated = await renderAnnotated(imgEl, view, landmarks, result.metrics);
-    await saveAssessment({
-      clientId: activeId,
-      createdAt: Date.now(),
-      view,
-      photo: imageBlob,
-      annotated,
-      imageWidth: imgEl.naturalWidth,
-      imageHeight: imgEl.naturalHeight,
-      landmarks,
-      metrics: result.metrics,
-      score: result.score,
-    });
-    navigate('/history');
-  }
-
   function annotatedFilename() {
     return `posturelab-${view}-${new Date().toISOString().slice(0, 10)}.png`;
   }
@@ -258,6 +262,8 @@ export default function AnalyzePage() {
   }
 
   function reset() {
+    currentId.current = null;
+    setSavedState('idle');
     setStage('pick');
     setLandmarks({});
     setImgEl(null);
@@ -401,15 +407,13 @@ export default function AnalyzePage() {
               <h2 className="mb-1 font-semibold">Measurements</h2>
               <MetricList metrics={result.metrics} />
             </div>
-            <div>
-              <button className="btn-primary w-full" onClick={save} disabled={activeId == null}>
-                {user ? 'Save assessment' : 'Log in to save assessment'}
-              </button>
-              {!user && (
-                <p className="mt-1 text-center text-xs text-slate-400">
-                  Don't worry — you won't get any spam.
-                </p>
-              )}
+            <div className="flex items-center justify-center gap-2 rounded-lg bg-slate-100 py-2 text-sm dark:bg-slate-800">
+              <span className={savedState === 'saved' ? 'text-emerald-600' : 'text-slate-500'}>
+                {savedState === 'saving' ? 'Saving…' : '✓ Saved automatically'}
+              </span>
+              <Link to="/history" className="text-brand-600 hover:underline">
+                View history
+              </Link>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <button className="btn-ghost" onClick={shareImage}>
@@ -450,18 +454,6 @@ export default function AnalyzePage() {
       )}
 
       <DotGuide view={view} open={showDotGuide} onClose={() => setShowDotGuide(false)} />
-
-      {showSignIn && (
-        <SignInModal
-          title="Log in to save your assessment"
-          subtitle="Don't worry — you won't get any spam. It just keeps your results synced and safe."
-          onClose={() => setShowSignIn(false)}
-          onSignedIn={() => {
-            setShowSignIn(false);
-            pendingSave.current = true; // save once auth state propagates
-          }}
-        />
-      )}
 
       {showCamera && (
         <CameraCapture
