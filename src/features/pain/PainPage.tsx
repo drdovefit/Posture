@@ -29,6 +29,19 @@ function sevColor(v: number) {
   return 'text-red-500';
 }
 
+/** yyyy-mm-dd → "Friday, August 14, 2026". */
+function niceDate(d: string) {
+  const dt = new Date(`${d}T00:00:00`);
+  return isNaN(dt.getTime())
+    ? d
+    : dt.toLocaleDateString(undefined, {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      });
+}
+
 export default function PainPage() {
   const { activeId } = useActiveClient();
   const entries = useLiveQuery(
@@ -114,6 +127,7 @@ export default function PainPage() {
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />
+            <span className="mt-1 block text-xs font-medium text-slate-600">{niceDate(date)}</span>
           </label>
           <label className="block min-w-0 text-sm">
             <span className="mb-1 block text-slate-500">Region</span>
@@ -148,9 +162,15 @@ export default function PainPage() {
             type="range"
             min={0}
             max={10}
+            step={1}
             value={severity}
             onChange={(e) => setSeverity(Number(e.target.value))}
-            className="w-full accent-brand-500"
+            className="range"
+            style={{
+              background: `linear-gradient(to right, #0ea5e9 ${(severity / 10) * 100}%, #e2e8f0 ${
+                (severity / 10) * 100
+              }%)`,
+            }}
           />
         </label>
         <label className="block text-sm">
@@ -269,7 +289,7 @@ export default function PainPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{e.region}</span>
-                    <span className="text-xs text-slate-500">{e.date}</span>
+                    <span className="text-xs text-slate-500">{niceDate(e.date)}</span>
                   </div>
                   {e.notes && <p className="truncate text-sm text-slate-500">{e.notes}</p>}
                 </div>
