@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   Area,
@@ -86,14 +86,6 @@ export default function PainPage() {
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
-  function toggleSelected(id: number) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }
-
   async function deleteSelected() {
     if (!selected.size) return;
     await db.pain.bulkDelete([...selected]);
@@ -101,14 +93,35 @@ export default function PainPage() {
     setSelecting(false);
   }
 
-  async function deleteAll() {
-    const ids = (entries ?? []).map((e) => e.id!).filter(Boolean);
-    if (!ids.length) return;
-    if (!confirm(`Delete all ${ids.length} entries? This cannot be undone.`)) return;
-    await db.pain.bulkDelete(ids);
-    setSelected(new Set());
-    setSelecting(false);
+  // Drag to paint-select: pressing an entry starts adding (or removing, if it
+  // was already selected) and dragging over others applies the same action.
+  const dragMode = useRef<'select' | 'deselect' | null>(null);
+  function applyMode(id: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (dragMode.current === 'deselect') next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
+  function startDrag(id: number) {
+    if (!selecting) return;
+    dragMode.current = selected.has(id) ? 'deselect' : 'select';
+    applyMode(id);
+  }
+  function dragOver(e: React.PointerEvent) {
+    if (!dragMode.current) return;
+    const el = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest(
+      '[data-entry-id]',
+    );
+    const id = el ? Number(el.getAttribute('data-entry-id')) : NaN;
+    if (id) applyMode(id);
+  }
+  useEffect(() => {
+    const end = () => (dragMode.current = null);
+    window.addEventListener('pointerup', end);
+    return () => window.removeEventListener('pointerup', end);
+  }, []);
 
   async function add() {
     if (activeId == null) return;
@@ -258,7 +271,11 @@ export default function PainPage() {
         </div>
       )}
 
-      <div className="space-y-2">
+      <div
+        className={`space-y-2 ${selecting ? 'select-none' : ''}`}
+        style={{ touchAction: selecting ? 'none' : undefined }}
+        onPointerMove={dragOver}
+      >
         {!entries?.length ? (
           <div className="card p-8 text-center text-slate-500">No entries yet.</div>
         ) : (
@@ -292,12 +309,6 @@ export default function PainPage() {
                     Delete selected
                   </button>
                   <button
-                    className="btn-ghost !py-1 text-xs !text-red-600"
-                    onClick={deleteAll}
-                  >
-                    Delete all
-                  </button>
-                  <button
                     className="btn-ghost !py-1 text-xs"
                     onClick={() => {
                       setSelecting(false);
@@ -317,18 +328,18 @@ export default function PainPage() {
             {entries.map((e) => (
               <div
                 key={e.id}
+                data-entry-id={e.id}
                 className={`card flex items-center gap-3 p-3 ${
                   selecting ? 'cursor-pointer' : ''
                 } ${e.id && selected.has(e.id) ? 'ring-2 ring-brand-500' : ''}`}
-                onClick={() => selecting && e.id && toggleSelected(e.id)}
+                onPointerDown={() => e.id && startDrag(e.id)}
               >
                 {selecting && (
                   <input
                     type="checkbox"
-                    className="h-5 w-5 shrink-0 accent-brand-500"
+                    className="pointer-events-none h-5 w-5 shrink-0 accent-brand-500"
                     checked={!!e.id && selected.has(e.id)}
-                    onChange={() => e.id && toggleSelected(e.id)}
-                    onClick={(ev) => ev.stopPropagation()}
+                    readOnly
                   />
                 )}
                 <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-100 font-bold dark:bg-slate-800 ${sevColor(e.severity)}`}>
