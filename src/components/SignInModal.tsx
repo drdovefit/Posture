@@ -72,6 +72,7 @@ export default function SignInModal({ title, subtitle, onSignedIn, onClose }: Pr
   }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
 
   // Tick once a second so the reset cooldown countdown stays live.
   const [, setTick] = useState(0);
@@ -105,6 +106,11 @@ export default function SignInModal({ title, subtitle, onSignedIn, onClose }: Pr
         setStatus(blocked);
         return;
       }
+    }
+    if (mode === 'signup' && password !== confirm) {
+      setStatusOk(false);
+      setStatus('Passwords don’t match — type the same one in both boxes.');
+      return;
     }
     setBusy(true);
     setStatus('');
@@ -177,9 +183,20 @@ export default function SignInModal({ title, subtitle, onSignedIn, onClose }: Pr
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleEmail()}
-            placeholder="Password"
+            placeholder={mode === 'signup' ? 'Create a password' : 'Password'}
             className="input"
           />
+          {mode === 'signup' && (
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleEmail()}
+              placeholder="Confirm password"
+              className="input"
+            />
+          )}
           <button className="btn-primary w-full" onClick={handleEmail} disabled={busy}>
             {busy ? 'Please wait…' : mode === 'signup' ? 'Create account & save' : 'Sign in & save'}
           </button>
@@ -203,6 +220,7 @@ export default function SignInModal({ title, subtitle, onSignedIn, onClose }: Pr
             onClick={() => {
               setMode((m) => (m === 'signup' ? 'signin' : 'signup'));
               setStatus('');
+              setConfirm('');
             }}
           >
             {mode === 'signup'

@@ -38,6 +38,7 @@ export default function SyncButton() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
 
   // Tick once a second so the reset cooldown countdown stays live.
   const [, setTick] = useState(0);
@@ -76,6 +77,7 @@ export default function SyncButton() {
     setOpen(false);
     setStatus('');
     setPassword('');
+    setConfirm('');
   }
 
   async function handleGoogle() {
@@ -100,6 +102,10 @@ export default function SyncButton() {
         setStatus(blocked);
         return;
       }
+    }
+    if (mode === 'signup' && password !== confirm) {
+      setStatus('Passwords don’t match — type the same one in both boxes.');
+      return;
     }
     setBusy(true);
     setStatus('');
@@ -232,9 +238,20 @@ export default function SyncButton() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleEmail()}
-                    placeholder="Password"
+                    placeholder={mode === 'signup' ? 'Create a password' : 'Password'}
                     className="input"
                   />
+                  {mode === 'signup' && (
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      value={confirm}
+                      onChange={(e) => setConfirm(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleEmail()}
+                      placeholder="Confirm password"
+                      className="input"
+                    />
+                  )}
                   <button className="btn-primary w-full" onClick={handleEmail} disabled={busy}>
                     {busy ? 'Please wait…' : mode === 'signup' ? 'Create account' : 'Sign in'}
                   </button>
@@ -260,6 +277,7 @@ export default function SyncButton() {
                     onClick={() => {
                       setMode((m) => (m === 'signup' ? 'signin' : 'signup'));
                       setStatus('');
+                      setConfirm('');
                     }}
                   >
                     {mode === 'signup'
@@ -273,7 +291,7 @@ export default function SyncButton() {
             {status && (
               <p
                 className={`rounded-lg p-2 text-sm font-medium ${
-                  /fail|wrong|error|blocked|problem|isn’t|isn't|closed|doesn’t|doesn't|too many|attempt|locked|wait|paused/i.test(status)
+                  /fail|wrong|error|blocked|problem|isn’t|isn't|closed|doesn’t|doesn't|don’t|don't|match|too many|attempt|locked|wait|paused/i.test(status)
                     ? 'border border-red-200 bg-red-50 text-red-700'
                     : 'bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-200'
                 }`}
