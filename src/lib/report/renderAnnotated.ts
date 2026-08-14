@@ -1,10 +1,22 @@
 import type { Landmarks, Metric, ViewType } from '../types';
 import { buildOverlay, COLORS } from '../pose/overlay';
 
+/** Load an image for compositing; resolves null if it isn't there. */
+function loadImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const im = new Image();
+    im.onload = () => resolve(im);
+    im.onerror = () => resolve(null);
+    im.src = src;
+  });
+}
+
 /**
  * Draw the photo plus the posture overlay (plumb line, body chain, level bars,
- * landmark dots) onto a canvas and return it as a PNG Blob. Used for the saved
- * annotated thumbnail and the PDF report.
+ * landmark dots) onto a canvas and return it as a PNG Blob. The PostureLab
+ * wordmark is stamped across the top and, if a QR image is present at
+ * brand/qr.png, it's placed in the bottom-right corner. Used for the saved
+ * annotated thumbnail, the shared/downloaded image, and the PDF report.
  */
 export async function renderAnnotated(
   image: HTMLImageElement,
@@ -63,6 +75,50 @@ export async function renderAnnotated(
     ctx.stroke();
     ctx.restore();
   });
+
+  const base = import.meta.env.BASE_URL;
+  const [wordmark, qr] = await Promise.all([
+    loadImage(`${base}brand/wordmark.png`),
+    loadImage(`${base}brand/qr.png`),
+  ]);
+
+  // Wordmark across the top (transparent PNG), with a soft shadow so it stays
+  // readable over any photo.
+  if (wordmark && wordmark.naturalWidth) {
+    const wmW = W * 0.42;
+    const wmH = (wordmark.naturalHeight / wordmark.naturalWidth) * wmW;
+    const wmX = (W - wmW) / 2;
+    const wmY = H * 0.025;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.35)';
+    ctx.shadowBlur = W * 0.012;
+    ctx.drawImage(wordmark, wmX, wmY, wmW, wmH);
+    ctx.restore();
+  }
+
+  // QR code in the bottom-right corner, on a white rounded card (a quiet zone
+  // so it scans). Only drawn if brand/qr.png exists.
+  if (qr && qr.naturalWidth) {
+    const size = Math.max(90, W * 0.16);
+    const pad = size * 0.09;
+    const margin = W * 0.03;
+    const cardW = size + pad * 2;
+    const cx = W - margin - cardW;
+    const cy = H - margin - cardW;
+    const r = size * 0.08;
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(cx + r, cy);
+    ctx.arcTo(cx + cardW, cy, cx + cardW, cy + cardW, r);
+    ctx.arcTo(cx + cardW, cy + cardW, cx, cy + cardW, r);
+    ctx.arcTo(cx, cy + cardW, cx, cy, r);
+    ctx.arcTo(cx, cy, cx + cardW, cy, r);
+    ctx.closePath();
+    ctx.fill();
+    ctx.drawImage(qr, cx + pad, cy + pad, size, size);
+    ctx.restore();
+  }
 
   return await new Promise<Blob>((resolve) =>
     canvas.toBlob((b) => resolve(b!), 'image/png', 0.92),

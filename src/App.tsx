@@ -1,5 +1,4 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { useTheme } from './state/theme';
 import ClientSwitcher from './components/ClientSwitcher';
 import SyncButton from './components/SyncButton';
 
@@ -13,7 +12,6 @@ const nav = [
 ];
 
 export default function App() {
-  const { theme, toggle } = useTheme();
   const loc = useLocation();
 
   return (
@@ -30,14 +28,6 @@ export default function App() {
           <div className="ml-auto flex items-center gap-2">
             <SyncButton />
             <ClientSwitcher />
-            <button
-              onClick={toggle}
-              className="btn-ghost h-9 w-9 !px-0"
-              aria-label="Toggle theme"
-              title="Toggle light/dark"
-            >
-              {theme === 'dark' ? '☀' : '☾'}
-            </button>
           </div>
         </div>
         <nav className="flex gap-1 overflow-x-auto px-2 pb-2">

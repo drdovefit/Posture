@@ -4,6 +4,10 @@ import { RouterProvider, createHashRouter } from 'react-router-dom';
 import './index.css';
 import App from './App';
 
+// Light mode only — clear any dark-mode class a previous version may have set.
+document.documentElement.classList.remove('dark');
+localStorage.removeItem('posturelab-theme');
+
 const DashboardPage = lazy(() => import('./features/dashboard/DashboardPage'));
 const AnalyzePage = lazy(() => import('./features/analysis/AnalyzePage'));
 const HistoryPage = lazy(() => import('./features/history/HistoryPage'));
