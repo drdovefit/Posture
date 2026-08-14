@@ -56,7 +56,7 @@ export default function App() {
       <footer className="border-t border-slate-200 px-4 py-4 text-center text-xs text-slate-400 dark:border-slate-800">
         PostureLab is an educational tool, not medical advice.
         <span className="mx-1">·</span>
-        <span title="App version">v{__APP_VERSION__} · build {__BUILD_ID__}</span>
+        <span title="App version">Version {__APP_VERSION__}</span>
       </footer>
     </div>
   );
