@@ -12,7 +12,7 @@ import {
 import { addPain, db, deletePain } from '../../lib/db';
 import { useActiveClient } from '../../state/useClient';
 
-const NOTES_MAX = 200;
+const NOTES_MAX = 399;
 
 const REGIONS = [
   'Neck',
