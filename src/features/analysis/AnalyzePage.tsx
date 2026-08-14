@@ -361,8 +361,8 @@ export default function AnalyzePage() {
 
       {stage === 'edit' && imageUrl && (
         <>
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <div className="space-y-3">
+          <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="space-y-3 lg:sticky lg:top-4 lg:self-start">
             <PostureEditor
               imageUrl={imageUrl}
               view={view}

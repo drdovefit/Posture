@@ -390,10 +390,16 @@ export function analyze(view: ViewType, lm: Landmarks): AnalysisResult {
   const score =
     totalWeight > 0 ? Math.round(clamp(100 - (penalty / totalWeight) * 100, 0, 100)) : 0;
 
+  // Order suggestions most-important first: metrics with a worse severity come
+  // first, keeping the natural metric order within the same severity. Every
+  // flagged area is still included — just in a nicer order.
+  const sevRank: Record<Severity, number> = { moderate: 0, mild: 1, good: 2 };
   const suggestionIds = Array.from(
     new Set(
       metrics
         .filter((m) => m.severity !== 'good')
+        .slice()
+        .sort((a, b) => sevRank[a.severity] - sevRank[b.severity])
         .flatMap((m) => suggestionsForMetric(m.id, m.value)),
     ),
   );
