@@ -3,7 +3,6 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../lib/db';
 import { useActiveClient } from '../../state/useClient';
 import ScoreRing from '../../components/ScoreRing';
-import BrandUploader from '../../components/BrandUploader';
 import { useBlobUrl } from '../../state/useBlobUrl';
 import type { Assessment } from '../../lib/types';
 
@@ -66,8 +65,6 @@ export default function DashboardPage() {
           ＋ New analysis
         </Link>
       </div>
-
-      <BrandUploader />
 
       {!assessments?.length ? (
         <div className="card overflow-hidden">

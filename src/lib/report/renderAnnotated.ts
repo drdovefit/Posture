@@ -83,17 +83,16 @@ export async function renderAnnotated(
     loadImage(storedBrandImage(BRAND_IMAGE_KEYS.qr) ?? `${base}brand/qr.png`),
   ]);
 
-  // Wordmark across the top (transparent PNG), with a soft shadow so it stays
-  // readable over any photo.
+  // Small wordmark in the top-left corner (transparent PNG), with a soft shadow
+  // so it stays readable over any photo.
   if (wordmark && wordmark.naturalWidth) {
-    const wmW = W * 0.42;
+    const wmW = W * 0.2;
     const wmH = (wordmark.naturalHeight / wordmark.naturalWidth) * wmW;
-    const wmX = (W - wmW) / 2;
-    const wmY = H * 0.025;
+    const margin = W * 0.03;
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.35)';
-    ctx.shadowBlur = W * 0.012;
-    ctx.drawImage(wordmark, wmX, wmY, wmW, wmH);
+    ctx.shadowBlur = W * 0.01;
+    ctx.drawImage(wordmark, margin, margin, wmW, wmH);
     ctx.restore();
   }
 

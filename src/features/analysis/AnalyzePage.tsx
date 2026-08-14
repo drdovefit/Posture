@@ -170,16 +170,28 @@ export default function AnalyzePage() {
     navigate('/history');
   }
 
-  // Share the annotated result — the OS share sheet lets them send it or save
-  // to Photos. Falls back to a direct download where sharing isn't supported.
+  function annotatedFilename() {
+    return `posturelab-${view}-${new Date().toISOString().slice(0, 10)}.png`;
+  }
+
+  function triggerDownload(blob: Blob) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = annotatedFilename();
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // Share the annotated result through the OS share sheet (send it or save to
+  // Photos). Falls back to a download where sharing isn't supported.
   async function shareImage() {
     if (!imgEl) return;
     const blob = await renderAnnotated(imgEl, view, landmarks, result.metrics);
-    const filename = `posturelab-${view}-${new Date().toISOString().slice(0, 10)}.png`;
-    const file = new File([blob], filename, { type: 'image/png' });
-    const nav = navigator as Navigator & {
-      canShare?: (data?: ShareData) => boolean;
-    };
+    const file = new File([blob], annotatedFilename(), { type: 'image/png' });
+    const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean };
     if (nav.canShare?.({ files: [file] })) {
       try {
         await nav.share({ files: [file], title: 'My PostureLab result' });
@@ -188,14 +200,13 @@ export default function AnalyzePage() {
         if ((e as { name?: string })?.name === 'AbortError') return; // user cancelled
       }
     }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    triggerDownload(blob);
+  }
+
+  async function downloadImage() {
+    if (!imgEl) return;
+    const blob = await renderAnnotated(imgEl, view, landmarks, result.metrics);
+    triggerDownload(blob);
   }
 
   function reset() {
@@ -353,9 +364,14 @@ export default function AnalyzePage() {
                 </p>
               )}
             </div>
-            <button className="btn-ghost w-full" onClick={shareImage}>
-              ⬆ Share / Save to Photos
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button className="btn-ghost" onClick={shareImage}>
+                ⬆ Share
+              </button>
+              <button className="btn-ghost" onClick={downloadImage}>
+                ⬇ Download
+              </button>
+            </div>
           </div>
           </div>
 
