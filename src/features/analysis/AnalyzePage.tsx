@@ -272,16 +272,12 @@ export default function AnalyzePage() {
       {stage === 'pick' && (
         <div className="card overflow-hidden">
           <div className="grid items-center gap-5 p-5 sm:grid-cols-2">
-            <div
-              className={`hidden items-center sm:flex ${
-                view === 'anterior' ? 'justify-start' : 'justify-center'
-              }`}
-            >
+            <div className="hidden items-center justify-center sm:flex">
               <img
                 src={`${import.meta.env.BASE_URL}brand/${view === 'lateral' ? 'side.jpg' : 'front.png'}`}
                 alt=""
                 className={`rounded-xl object-contain ${
-                  view === 'anterior' ? 'max-h-80 sm:-ml-3' : 'max-h-72'
+                  view === 'anterior' ? 'max-h-80' : 'max-h-72'
                 }`}
                 loading="lazy"
               />
