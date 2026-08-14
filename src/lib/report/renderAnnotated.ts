@@ -1,5 +1,6 @@
 import type { Landmarks, Metric, ViewType } from '../types';
 import { buildOverlay, COLORS } from '../pose/overlay';
+import { BRAND_IMAGE_KEYS, storedBrandImage } from '../brandImages';
 
 /** Load an image for compositing; resolves null if it isn't there. */
 function loadImage(src: string): Promise<HTMLImageElement | null> {
@@ -79,7 +80,7 @@ export async function renderAnnotated(
   const base = import.meta.env.BASE_URL;
   const [wordmark, qr] = await Promise.all([
     loadImage(`${base}brand/wordmark.png`),
-    loadImage(`${base}brand/qr.png`),
+    loadImage(storedBrandImage(BRAND_IMAGE_KEYS.qr) ?? `${base}brand/qr.png`),
   ]);
 
   // Wordmark across the top (transparent PNG), with a soft shadow so it stays

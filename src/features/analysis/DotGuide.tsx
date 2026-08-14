@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ViewType } from '../../lib/types';
+import { BRAND_IMAGE_KEYS, storedBrandImage } from '../../lib/brandImages';
 
 const HIDE_KEY = 'posturelab-dotguide-hidden';
 const GENDER_KEY = 'posturelab-gender';
@@ -68,7 +69,9 @@ export default function DotGuide({ view, open, onClose }: Props) {
   const rows = PLACEMENTS[localView];
   const viewSlug = localView === 'lateral' ? 'side' : 'front';
   const bigImg = `${import.meta.env.BASE_URL}brand/dots-${viewSlug}-${gender}.png`;
-  const clothingImg = `${import.meta.env.BASE_URL}brand/clothing-guide.png`;
+  const clothingImg =
+    storedBrandImage(BRAND_IMAGE_KEYS.clothing) ??
+    `${import.meta.env.BASE_URL}brand/clothing-guide.png`;
 
   function handleGotIt() {
     if (dontShow) localStorage.setItem(HIDE_KEY, '1');
