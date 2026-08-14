@@ -1,5 +1,4 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import ClientSwitcher from './components/ClientSwitcher';
 import SyncButton from './components/SyncButton';
 
 const nav = [
@@ -27,7 +26,6 @@ export default function App() {
           </NavLink>
           <div className="ml-auto flex items-center gap-2">
             <SyncButton />
-            <ClientSwitcher />
           </div>
         </div>
         <nav className="flex gap-1 overflow-x-auto px-2 pb-2">
