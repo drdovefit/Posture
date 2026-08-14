@@ -131,10 +131,14 @@ export default function PostureEditor({
 
 
   // --- Pointer handling on the container (pan + pinch) -----------------------
+  const downRef = useRef<{ t: number; x: number; y: number } | null>(null);
+  const lastTap = useRef(0);
+
   function onContainerPointerDown(e: React.PointerEvent) {
     if (readOnly || dragKey) return;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    downRef.current = { t: Date.now(), x: e.clientX, y: e.clientY };
     if (pointers.current.size === 2) {
       const [a, b] = [...pointers.current.values()];
       pinchStart.current = { dist: Math.hypot(a.x - b.x, a.y - b.y), zoom };
@@ -170,7 +174,25 @@ export default function PostureEditor({
   function onContainerPointerUp(e: React.PointerEvent) {
     pointers.current.delete(e.pointerId);
     if (pointers.current.size < 2) pinchStart.current = null;
-    if (dragKey) setDragKey(null);
+    if (dragKey) {
+      setDragKey(null);
+      return;
+    }
+    // Double-tap (or double-click) on the image resets the zoom — a reliable way
+    // out if you ever get zoomed in and stuck on a phone.
+    const d = downRef.current;
+    if (d) {
+      const dt = Date.now() - d.t;
+      const dist = Math.hypot(e.clientX - d.x, e.clientY - d.y);
+      if (dt < 250 && dist < 10) {
+        if (Date.now() - lastTap.current < 300) {
+          resetZoom();
+          lastTap.current = 0;
+        } else {
+          lastTap.current = Date.now();
+        }
+      }
+    }
   }
 
   return (

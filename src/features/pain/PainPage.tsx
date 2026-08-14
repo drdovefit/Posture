@@ -31,6 +31,11 @@ function sevColor(v: number) {
   return 'text-red-500';
 }
 
+/** How the severity number is shown (display only — storage/chart stay numeric). */
+function sevDisplay(v: number) {
+  return v === 4 ? '3.9' : String(v);
+}
+
 /** yyyy-mm-dd → "Friday, August 14, 2026". */
 function niceDate(d: string) {
   const dt = new Date(`${d}T00:00:00`);
@@ -197,7 +202,7 @@ export default function PainPage() {
           <span className="mb-1 flex justify-between text-slate-500">
             <span>Severity</span>
             <span className={`font-bold ${sevColor(Math.round(sliderVal))}`}>
-              {Math.round(sliderVal)}/10
+              {sevDisplay(Math.round(sliderVal))}/10
             </span>
           </span>
           <input
@@ -342,8 +347,8 @@ export default function PainPage() {
                     readOnly
                   />
                 )}
-                <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-100 font-bold dark:bg-slate-800 ${sevColor(e.severity)}`}>
-                  {e.severity}
+                <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-100 text-sm font-bold dark:bg-slate-800 ${sevColor(e.severity)}`}>
+                  {sevDisplay(e.severity)}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">

@@ -5,6 +5,8 @@ import { useActiveClient } from '../../state/useClient';
 import { useBlobUrl } from '../../state/useBlobUrl';
 import { useCroppedPortrait } from '../../state/useCroppedPortrait';
 import { exportAssessmentPdf } from '../../lib/report/pdf';
+import { analyze } from '../../lib/measure';
+import { getSuggestions } from '../../lib/measure/suggestions';
 import MetricList from '../../components/MetricList';
 import ScoreRing from '../../components/ScoreRing';
 import ScoreTrend from './ScoreTrend';
@@ -17,6 +19,10 @@ const VIEW_LABEL: Record<string, string> = {
   posterior: 'Back',
 };
 
+function scoreColor(score: number) {
+  return score >= 85 ? '#10b981' : score >= 65 ? '#f59e0b' : '#ef4444';
+}
+
 function Row({ a, client }: { a: Assessment; client: Client | null }) {
   const url = useBlobUrl(a.annotated ?? a.photo); // full image, for the download link
   const thumb = useCroppedPortrait(a); // cropped to the body, for the thumbnail
@@ -24,8 +30,16 @@ function Row({ a, client }: { a: Assessment; client: Client | null }) {
   return (
     <div className="card overflow-hidden">
       <div className="flex gap-4 p-4">
-        <div className="h-32 w-24 shrink-0 overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800">
-          {thumb && <img src={thumb} alt="" className="h-full w-full object-cover" />}
+        <div className="shrink-0">
+          <div className="h-32 w-24 overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800">
+            {thumb && <img src={thumb} alt="" className="h-full w-full object-cover" />}
+          </div>
+          <div
+            className="mt-1 text-center text-lg font-bold sm:hidden"
+            style={{ color: scoreColor(a.score) }}
+          >
+            {a.score}
+          </div>
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -80,8 +94,33 @@ function Row({ a, client }: { a: Assessment; client: Client | null }) {
         </div>
       </div>
       {open && (
-        <div className="border-t border-slate-100 p-4 dark:border-slate-800">
+        <div className="space-y-4 border-t border-slate-100 p-4 dark:border-slate-800">
           <MetricList metrics={a.metrics} />
+          {(() => {
+            const suggestions = getSuggestions(analyze(a.view, a.landmarks).suggestionIds);
+            if (!suggestions.length) return null;
+            return (
+              <div>
+                <h3 className="mb-2 font-semibold">What to work on</h3>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {suggestions.map((s) => (
+                    <div
+                      key={s.id}
+                      className="rounded-xl border border-slate-200 p-3 dark:border-slate-800"
+                    >
+                      <div className="mb-1 flex items-center gap-2">
+                        <span className="chip bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200">
+                          {s.category}
+                        </span>
+                        <span className="text-sm font-medium">{s.title}</span>
+                      </div>
+                      <p className="text-sm text-slate-500">{s.detail}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>

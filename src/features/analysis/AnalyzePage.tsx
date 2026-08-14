@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import type { Landmarks, Point, ViewType } from '../../lib/types';
+import { Link } from 'react-router-dom';
+import type { Landmarks, ViewType } from '../../lib/types';
 import { analyze } from '../../lib/measure';
 import { detectPose } from '../../lib/pose/landmarker';
 import { defaultLandmarks, mapLandmarks } from '../../lib/pose/mapping';
 import { renderAnnotated } from '../../lib/report/renderAnnotated';
 import { getSuggestions } from '../../lib/measure/suggestions';
 import { scoreFeedback } from '../../lib/measure/feedback';
-import { saveAssessment } from '../../lib/db';
+import { db, saveAssessment } from '../../lib/db';
 import { useActiveClient } from '../../state/useClient';
 import { useAuth } from '../../state/auth';
 import PostureEditor from '../../components/PostureEditor';
@@ -17,89 +17,81 @@ import SignInModal from '../../components/SignInModal';
 import CameraCapture from '../capture/CameraCapture';
 import DotGuide, { dotGuideHidden } from './DotGuide';
 
-type Stage = 'pick' | 'edit';
-
 const VIEWS: { id: ViewType; label: string; hint: string }[] = [
   { id: 'lateral', label: 'Side', hint: 'Stand side-on to the camera' },
   { id: 'anterior', label: 'Front', hint: 'Face the camera' },
 ];
+
+/** One captured view (photo + its landmarks), so Side and Front are both kept. */
+interface Shot {
+  url: string;
+  blob: Blob;
+  imgEl: HTMLImageElement | null;
+  landmarks: Landmarks;
+  detectMsg: string;
+  savedId?: number;
+}
 
 export default function AnalyzePage() {
   const { activeId } = useActiveClient();
   const { user } = useAuth();
   const [showSignIn, setShowSignIn] = useState(false);
   const pendingSave = useRef(false);
-  const navigate = useNavigate();
 
   const [view, setView] = useState<ViewType>('lateral');
-  const [stage, setStage] = useState<Stage>('pick');
-  const [imageUrl, setImageUrl] = useState<string>('');
-  const [imageBlob, setImageBlob] = useState<Blob | null>(null);
-  const [imgEl, setImgEl] = useState<HTMLImageElement | null>(null);
-  const [landmarks, setLandmarks] = useState<Landmarks>({});
+  const [shots, setShots] = useState<Partial<Record<ViewType, Shot>>>({});
   const [detecting, setDetecting] = useState(false);
-  const [detectMsg, setDetectMsg] = useState<string>('');
   const [showCamera, setShowCamera] = useState(false);
   const [showDotGuide, setShowDotGuide] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const result = useMemo(() => analyze(view, landmarks), [view, landmarks]);
+  const shot = shots[view];
+  const stage: 'pick' | 'edit' = shot ? 'edit' : 'pick';
+  const result = useMemo(
+    () => analyze(view, shot?.landmarks ?? {}),
+    [view, shot?.landmarks],
+  );
   const suggestions = getSuggestions(result.suggestionIds);
 
-  useEffect(() => {
-    return () => {
-      if (imageUrl) URL.revokeObjectURL(imageUrl);
-    };
-  }, [imageUrl]);
-
-  // After a sign-in triggered by the Save button, complete the save once the
-  // auth state has propagated to this component.
-  useEffect(() => {
-    if (user && pendingSave.current) {
-      pendingSave.current = false;
-      save();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  // When the view is switched while editing, re-map landmarks for the new view.
-  const firstRun = useRef(true);
-  useEffect(() => {
-    if (firstRun.current) {
-      firstRun.current = false;
-      return;
-    }
-    if (stage === 'edit' && imgEl) reDetect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view]);
+  function patchShot(v: ViewType, patch: Partial<Shot>) {
+    setShots((prev) => {
+      const cur = prev[v];
+      if (!cur) return prev;
+      return { ...prev, [v]: { ...cur, ...patch } };
+    });
+  }
 
   async function loadBlob(blob: Blob) {
+    const forView = view;
     const url = URL.createObjectURL(blob);
-    setImageBlob(blob);
-    setImageUrl(url);
-
     const img = new Image();
     img.src = url;
     await img.decode().catch(() => {});
-    setImgEl(img);
-    setStage('edit');
+    setShots((prev) => {
+      const old = prev[forView];
+      if (old?.url) URL.revokeObjectURL(old.url);
+      return {
+        ...prev,
+        [forView]: { url, blob, imgEl: img, landmarks: {}, detectMsg: 'Detecting posture…' },
+      };
+    });
     if (!dotGuideHidden()) setShowDotGuide(true);
 
-    // Try auto-detection; fall back to manual defaults.
     setDetecting(true);
-    setDetectMsg('Detecting posture…');
     try {
       const raw = await detectPose(img);
-      if (raw) {
-        setLandmarks(mapLandmarks(raw, view));
-        setDetectMsg('Auto-detected — drag any point to fine-tune.');
-      } else {
-        setLandmarks(defaultLandmarks(view));
-        setDetectMsg('No body detected — drag the points onto the joints.');
-      }
+      patchShot(forView, {
+        landmarks: raw ? mapLandmarks(raw, forView) : defaultLandmarks(forView),
+        detectMsg: raw
+          ? 'Auto-detected — drag any point to fine-tune.'
+          : 'No body detected — drag the points onto the joints.',
+      });
     } catch {
-      setLandmarks(defaultLandmarks(view));
-      setDetectMsg('Auto-detection unavailable — place the points manually.');
+      patchShot(forView, {
+        landmarks: defaultLandmarks(forView),
+        detectMsg: 'Auto-detection unavailable — place the points manually.',
+      });
     } finally {
       setDetecting(false);
     }
@@ -108,9 +100,10 @@ export default function AnalyzePage() {
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (f) loadBlob(f);
+    e.target.value = '';
   }
 
-  // Paste an image from the clipboard (Cmd/Ctrl+V) to start an analysis.
+  // Paste an image (Cmd/Ctrl+V) to start an analysis for the active view.
   const loadBlobRef = useRef(loadBlob);
   loadBlobRef.current = loadBlob;
   useEffect(() => {
@@ -132,96 +125,74 @@ export default function AnalyzePage() {
     return () => window.removeEventListener('paste', onPaste);
   }, []);
 
+  // Complete a save once auth state propagates after a sign-in.
+  const saveRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    if (user && pendingSave.current) {
+      pendingSave.current = false;
+      saveRef.current();
+    }
+  }, [user]);
+
   async function reDetect() {
-    if (!imgEl) return;
+    const s = shots[view];
+    if (!s?.imgEl) return;
     setDetecting(true);
-    setDetectMsg('Re-detecting…');
+    patchShot(view, { detectMsg: 'Re-detecting…' });
     try {
-      const raw = await detectPose(imgEl);
-      setLandmarks(raw ? mapLandmarks(raw, view) : defaultLandmarks(view));
-      setDetectMsg(raw ? 'Re-detected.' : 'No body detected.');
+      const raw = await detectPose(s.imgEl);
+      patchShot(view, {
+        landmarks: raw ? mapLandmarks(raw, view) : defaultLandmarks(view),
+        detectMsg: raw ? 'Re-detected.' : 'No body detected.',
+      });
     } catch {
-      setDetectMsg('Auto-detection unavailable.');
+      patchShot(view, { detectMsg: 'Auto-detection unavailable.' });
     } finally {
       setDetecting(false);
     }
   }
 
-  // Crop the photo tight to the detected body (with padding), then re-detect on
-  // the cropped image so the analysis and saved photo lose the empty background.
-  async function cropToPerson() {
-    if (!imgEl) return;
-    const pts = Object.values(landmarks).filter(Boolean) as Point[];
-    if (!pts.length) return;
-    const W = imgEl.naturalWidth;
-    const H = imgEl.naturalHeight;
-    const minX = Math.min(...pts.map((p) => p.x));
-    const maxX = Math.max(...pts.map((p) => p.x));
-    const minY = Math.min(...pts.map((p) => p.y));
-    const maxY = Math.max(...pts.map((p) => p.y));
-    const left = Math.max(0, minX - 0.08) * W;
-    const right = Math.min(1, maxX + 0.08) * W;
-    const top = Math.max(0, minY - 0.08) * H;
-    const bottom = Math.min(1, maxY + 0.06) * H;
-    const cw = Math.max(1, right - left);
-    const ch = Math.max(1, bottom - top);
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(cw);
-    canvas.height = Math.round(ch);
-    canvas.getContext('2d')!.drawImage(imgEl, left, top, cw, ch, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob>((res) =>
-      canvas.toBlob((b) => res(b!), 'image/jpeg', 0.92),
-    );
-
-    if (imageUrl) URL.revokeObjectURL(imageUrl);
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.src = url;
-    await img.decode().catch(() => {});
-    setImageBlob(blob);
-    setImageUrl(url);
-    setImgEl(img);
-
-    setDetecting(true);
-    setDetectMsg('Re-detecting on the cropped photo…');
-    try {
-      const raw = await detectPose(img);
-      setLandmarks(raw ? mapLandmarks(raw, view) : defaultLandmarks(view));
-      setDetectMsg(raw ? 'Cropped — drag any point to fine-tune.' : 'Cropped — place the points.');
-    } catch {
-      setDetectMsg('Cropped.');
-    } finally {
-      setDetecting(false);
-    }
+  function replacePhoto() {
+    const s = shots[view];
+    if (s?.url) URL.revokeObjectURL(s.url);
+    setShots((prev) => {
+      const next = { ...prev };
+      delete next[view];
+      return next;
+    });
   }
 
   async function save() {
-    if (!imageBlob || !imgEl || activeId == null) return;
-    // Require an account before saving, so results sync and aren't lost.
+    const s = shots[view];
+    if (!s?.blob || !s.imgEl || activeId == null) return;
     if (!user) {
       setShowSignIn(true);
       return;
     }
-    const annotated = await renderAnnotated(imgEl, view, landmarks, result.metrics);
-    await saveAssessment({
+    const annotated = await renderAnnotated(s.imgEl, view, s.landmarks, result.metrics);
+    const data = {
       clientId: activeId,
-      createdAt: Date.now(),
       view,
-      photo: imageBlob,
+      photo: s.blob,
       annotated,
-      imageWidth: imgEl.naturalWidth,
-      imageHeight: imgEl.naturalHeight,
-      landmarks,
+      imageWidth: s.imgEl.naturalWidth,
+      imageHeight: s.imgEl.naturalHeight,
+      landmarks: s.landmarks,
       metrics: result.metrics,
       score: result.score,
-    });
-    navigate('/history');
+    };
+    if (s.savedId != null) {
+      await db.assessments.update(s.savedId, data);
+    } else {
+      const id = (await saveAssessment({ createdAt: Date.now(), ...data })) as number;
+      patchShot(view, { savedId: id });
+    }
   }
+  saveRef.current = save;
 
   function annotatedFilename() {
     return `posturelab-${view}-${new Date().toISOString().slice(0, 10)}.png`;
   }
-
   function triggerDownload(blob: Blob) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -232,12 +203,10 @@ export default function AnalyzePage() {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-
-  // Share the annotated result through the OS share sheet (send it or save to
-  // Photos). Falls back to a download where sharing isn't supported.
   async function shareImage() {
-    if (!imgEl) return;
-    const blob = await renderAnnotated(imgEl, view, landmarks, result.metrics);
+    const s = shots[view];
+    if (!s?.imgEl) return;
+    const blob = await renderAnnotated(s.imgEl, view, s.landmarks, result.metrics);
     const file = new File([blob], annotatedFilename(), { type: 'image/png' });
     const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean };
     if (nav.canShare?.({ files: [file] })) {
@@ -245,38 +214,26 @@ export default function AnalyzePage() {
         await nav.share({ files: [file], title: 'My PostureLab result' });
         return;
       } catch (e) {
-        if ((e as { name?: string })?.name === 'AbortError') return; // user cancelled
+        if ((e as { name?: string })?.name === 'AbortError') return;
       }
     }
     triggerDownload(blob);
   }
-
   async function downloadImage() {
-    if (!imgEl) return;
-    const blob = await renderAnnotated(imgEl, view, landmarks, result.metrics);
-    triggerDownload(blob);
+    const s = shots[view];
+    if (!s?.imgEl) return;
+    triggerDownload(await renderAnnotated(s.imgEl, view, s.landmarks, result.metrics));
   }
-
-  function reset() {
-    setStage('pick');
-    setLandmarks({});
-    setImgEl(null);
-    setImageBlob(null);
-    if (imageUrl) URL.revokeObjectURL(imageUrl);
-    setImageUrl('');
-  }
-
-  const viewLabel = VIEWS.find((v) => v.id === view)!.label.toLowerCase();
-  const [dragOver, setDragOver] = useState(false);
 
   function onDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragOver(false);
-    const f = Array.from(e.dataTransfer.files).find((file) =>
-      file.type.startsWith('image/'),
-    );
+    const f = Array.from(e.dataTransfer.files).find((file) => file.type.startsWith('image/'));
     if (f) loadBlob(f);
   }
+
+  const viewLabel = VIEWS.find((v) => v.id === view)!.label.toLowerCase();
+  const bothShots = shots.lateral && shots.anterior;
 
   return (
     <div
@@ -299,7 +256,7 @@ export default function AnalyzePage() {
       )}
       <h1 className="text-2xl font-bold">New analysis</h1>
 
-      {/* View selector — pick which view, then add a photo for it. */}
+      {/* Side / Front tabs — each keeps its own photo, so you can do both. */}
       <div className="grid grid-cols-2 gap-2">
         {VIEWS.map((v) => (
           <button
@@ -311,7 +268,10 @@ export default function AnalyzePage() {
                 : 'border-slate-200 hover:border-slate-300 dark:border-slate-800'
             }`}
           >
-            <div className="font-semibold">{v.label} view</div>
+            <div className="flex items-center gap-2 font-semibold">
+              {v.label} view
+              {shots[v.id] && <span className="text-brand-500">●</span>}
+            </div>
             <div className="hidden text-xs text-slate-500 sm:block">{v.hint}</div>
           </button>
         ))}
@@ -324,9 +284,7 @@ export default function AnalyzePage() {
               <img
                 src={`${import.meta.env.BASE_URL}brand/${view === 'lateral' ? 'side.jpg' : 'front.png'}`}
                 alt=""
-                className={`rounded-xl object-contain ${
-                  view === 'anterior' ? 'max-h-80' : 'max-h-72'
-                }`}
+                className={`rounded-xl object-contain ${view === 'anterior' ? 'max-h-80' : 'max-h-72'}`}
                 loading="lazy"
               />
             </div>
@@ -337,7 +295,8 @@ export default function AnalyzePage() {
                 relaxed. It’s auto-detected the moment you add it.
               </p>
               <p className="text-xs text-slate-400">
-                Tip: you can also paste (⌘/Ctrl + V) or drag &amp; drop an image.
+                Tip: paste (⌘/Ctrl + V) or drag &amp; drop an image. Add a Side and a
+                Front — both are kept so you can view them together.
               </p>
               <div className="flex flex-wrap gap-3">
                 <button className="btn-primary" onClick={() => fileRef.current?.click()}>
@@ -347,80 +306,107 @@ export default function AnalyzePage() {
                   Use camera
                 </button>
               </div>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={onFile}
-              />
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
             </div>
           </div>
         </div>
       )}
 
-      {stage === 'edit' && imageUrl && (
+      {stage === 'edit' && shot && (
         <>
           <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <div className="space-y-3 lg:sticky lg:top-4 lg:self-start">
-            <PostureEditor
-              imageUrl={imageUrl}
-              view={view}
-              landmarks={landmarks}
-              metrics={result.metrics}
-              onChange={setLandmarks}
-            />
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="text-slate-500">{detectMsg}</span>
-              <div className="ml-auto flex gap-2">
-                <button className="btn-ghost" onClick={() => setShowDotGuide(true)}>
-                  ? Dot guide
+            <div className="space-y-3 lg:sticky lg:top-4 lg:self-start">
+              <PostureEditor
+                imageUrl={shot.url}
+                view={view}
+                landmarks={shot.landmarks}
+                metrics={result.metrics}
+                onChange={(lm) => patchShot(view, { landmarks: lm })}
+              />
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-slate-500">{shot.detectMsg}</span>
+                <div className="ml-auto flex gap-2">
+                  <button className="btn-ghost" onClick={() => setShowDotGuide(true)}>
+                    ? Dot guide
+                  </button>
+                  <button className="btn-ghost" onClick={reDetect} disabled={detecting}>
+                    {detecting ? 'Detecting…' : 'Re-detect'}
+                  </button>
+                  <button className="btn-ghost" onClick={replacePhoto}>
+                    Replace photo
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="card flex items-center gap-4 p-4">
+                <ScoreRing score={result.score} size={96} />
+                <div className="text-sm">
+                  <div className="font-semibold">{scoreFeedback(result.score).title}</div>
+                  <p className="mt-0.5 text-slate-500">{scoreFeedback(result.score).detail}</p>
+                </div>
+              </div>
+              <div className="card p-4">
+                <h2 className="mb-1 font-semibold">Measurements</h2>
+                <MetricList metrics={result.metrics} />
+              </div>
+              <div>
+                <button className="btn-primary w-full" onClick={save} disabled={activeId == null}>
+                  {shot.savedId != null
+                    ? 'Saved ✓ — Update'
+                    : user
+                      ? 'Save assessment'
+                      : 'Log in to save assessment'}
                 </button>
-                <button className="btn-ghost" onClick={cropToPerson} disabled={detecting}>
-                  ⤢ Crop
+                {shot.savedId != null ? (
+                  <p className="mt-1 text-center text-xs text-slate-400">
+                    Saved to your <Link to="/history" className="text-brand-600 hover:underline">history</Link>.
+                  </p>
+                ) : (
+                  !user && (
+                    <p className="mt-1 text-center text-xs text-slate-400">
+                      Don't worry — you won't get any spam.
+                    </p>
+                  )
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button className="btn-ghost" onClick={shareImage}>
+                  ⬆ Share
                 </button>
-                <button className="btn-ghost" onClick={reDetect} disabled={detecting}>
-                  {detecting ? 'Detecting…' : 'Re-detect'}
-                </button>
-                <button className="btn-ghost" onClick={reset}>
-                  ＋ Add another photo
+                <button className="btn-ghost" onClick={downloadImage}>
+                  ⬇ Download
                 </button>
               </div>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="card flex items-center gap-4 p-4">
-              <ScoreRing score={result.score} size={96} />
-              <div className="text-sm">
-                <div className="font-semibold">{scoreFeedback(result.score).title}</div>
-                <p className="mt-0.5 text-slate-500">{scoreFeedback(result.score).detail}</p>
+          {bothShots && (
+            <div className="card p-4">
+              <h2 className="mb-3 font-semibold">Side &amp; front together</h2>
+              <div className="grid grid-cols-2 gap-4">
+                {(['lateral', 'anterior'] as ViewType[]).map((v) => {
+                  const s = shots[v]!;
+                  const r = analyze(v, s.landmarks);
+                  return (
+                    <div key={v}>
+                      <PostureEditor
+                        imageUrl={s.url}
+                        view={v}
+                        landmarks={s.landmarks}
+                        metrics={r.metrics}
+                        readOnly
+                      />
+                      <div className="mt-1 text-center text-sm font-semibold">
+                        {VIEWS.find((x) => x.id === v)!.label} · {r.score}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-            <div className="card p-4">
-              <h2 className="mb-1 font-semibold">Measurements</h2>
-              <MetricList metrics={result.metrics} />
-            </div>
-            <div>
-              <button className="btn-primary w-full" onClick={save} disabled={activeId == null}>
-                {user ? 'Save assessment' : 'Log in to save assessment'}
-              </button>
-              {!user && (
-                <p className="mt-1 text-center text-xs text-slate-400">
-                  Don't worry — you won't get any spam.
-                </p>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <button className="btn-ghost" onClick={shareImage}>
-                ⬆ Share
-              </button>
-              <button className="btn-ghost" onClick={downloadImage}>
-                ⬇ Download
-              </button>
-            </div>
-          </div>
-          </div>
+          )}
 
           {suggestions.length > 0 && (
             <div className="card p-4">
@@ -430,10 +416,7 @@ export default function AnalyzePage() {
               </div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {suggestions.map((s) => (
-                  <div
-                    key={s.id}
-                    className="rounded-xl border border-slate-200 p-3 dark:border-slate-800"
-                  >
+                  <div key={s.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
                     <div className="mb-1 flex items-center gap-2">
                       <span className="chip bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200">
                         {s.category}
@@ -458,7 +441,7 @@ export default function AnalyzePage() {
           onClose={() => setShowSignIn(false)}
           onSignedIn={() => {
             setShowSignIn(false);
-            pendingSave.current = true; // save once auth state propagates
+            pendingSave.current = true;
           }}
         />
       )}

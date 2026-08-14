@@ -102,7 +102,9 @@ export async function renderAnnotated(
   const bottomY = H - margin;
   const cardX = W - margin - cardW;
   const wmY = bottomY - wmH;
-  const wmX = cardX + (cardW - wmW) / 2;
+  // Keep the wordmark fully on-screen: centered under the QR card when there is
+  // one, otherwise flush to the right margin (never hanging off the edge).
+  const wmX = hasQr ? cardX + (cardW - wmW) / 2 : W - margin - wmW;
 
   if (hasQr) {
     const cardY = wmY - gap - cardW;

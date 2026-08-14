@@ -51,71 +51,65 @@ export async function exportAssessmentPdf(client: Client, a: Assessment) {
   doc.text(`View: ${VIEW_LABEL[a.view] ?? a.view}`, margin, yPos);
   yPos += 24;
 
-  // Annotated image + score
+  // Annotated image on the left; score and measurements stacked in the right
+  // column so the space beside the image isn't wasted.
   const imgBlob = a.annotated ?? a.photo;
   const dataUrl = await blobToDataUrl(imgBlob);
-  const imgW = 220;
+  const imgW = 200;
   const ratio = a.imageHeight / a.imageWidth || 1.4;
-  const imgH = imgW * ratio;
+  const imgH = Math.min(imgW * ratio, 360);
   try {
     doc.addImage(dataUrl, 'PNG', margin, yPos, imgW, imgH, undefined, 'FAST');
   } catch {
     /* image may be unsupported format; skip gracefully */
   }
 
-  // Score badge to the right of the image
-  const scoreX = margin + imgW + 40;
+  const rightX = margin + imgW + 28;
+  const rightW = pageW - rightX - margin;
+  let ry = yPos;
+
+  const sev = (m: Metric): [number, number, number] =>
+    m.severity === 'good' ? [16, 185, 129] : m.severity === 'mild' ? [245, 158, 11] : [239, 68, 68];
+
+  // Score
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('Posture Score', scoreX, yPos + 20);
-  doc.setFontSize(46);
+  doc.setFontSize(13);
+  doc.setTextColor(30, 41, 59);
+  doc.text('Posture Score', rightX, ry + 12);
+  doc.setFontSize(40);
   const scoreColor: [number, number, number] =
     a.score >= 85 ? [16, 185, 129] : a.score >= 65 ? [245, 158, 11] : [239, 68, 68];
   doc.setTextColor(...scoreColor);
-  doc.text(`${a.score}`, scoreX, yPos + 66);
-  doc.setFontSize(14);
-  doc.setTextColor(100, 116, 139);
-  doc.text('/ 100', scoreX + 52, yPos + 66);
-
-  yPos += imgH + 30;
-  doc.setTextColor(30, 41, 59);
-
-  // Metrics table
-  doc.setFont('helvetica', 'bold');
+  doc.text(`${a.score}`, rightX, ry + 50);
+  const sw = doc.getTextWidth(`${a.score}`);
   doc.setFontSize(13);
-  doc.text('Measurements', margin, yPos);
-  yPos += 16;
-  doc.setFontSize(10);
-
-  const col = { metric: margin, value: 250, status: 380, normal: 440 };
   doc.setTextColor(100, 116, 139);
-  doc.text('Metric', col.metric, yPos);
-  doc.text('Value', col.value, yPos);
-  doc.text('Status', col.status, yPos);
-  doc.text('Normal', col.normal, yPos);
-  yPos += 6;
-  doc.setDrawColor(226, 232, 240);
-  doc.line(margin, yPos, pageW - margin, yPos);
-  yPos += 14;
+  doc.text('/ 100', rightX + sw + 6, ry + 50);
+  ry += 74;
 
+  // Compact measurements list under the score
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
   doc.setTextColor(30, 41, 59);
-  doc.setFont('helvetica', 'normal');
+  doc.text('Measurements', rightX, ry);
+  ry += 16;
+  doc.setFontSize(9.5);
   a.metrics.forEach((m: Metric) => {
-    if (yPos > 760) {
-      doc.addPage();
-      yPos = margin;
-    }
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
-    doc.text(m.label, col.metric, yPos);
-    doc.text(m.display, col.value, yPos);
-    const c: [number, number, number] =
-      m.severity === 'good' ? [16, 185, 129] : m.severity === 'mild' ? [245, 158, 11] : [239, 68, 68];
-    doc.setTextColor(...c);
-    doc.text(SEV_LABEL[m.severity], col.status, yPos);
+    const labelLines = doc.splitTextToSize(m.label, rightW - 52);
+    doc.text(labelLines, rightX, ry);
+    doc.setTextColor(...sev(m));
+    doc.text(SEV_LABEL[m.severity], rightX + rightW, ry, { align: 'right' });
+    ry += labelLines.length * 11;
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 116, 139);
-    doc.text(doc.splitTextToSize(m.normal, 150), col.normal, yPos);
-    yPos += 18;
+    doc.text(m.display, rightX, ry);
+    ry += 15;
   });
+
+  yPos = Math.max(yPos + imgH, ry) + 26;
+  doc.setTextColor(30, 41, 59);
 
   // Suggestions
   const flagged = a.metrics.filter((m) => m.severity !== 'good');
@@ -125,7 +119,7 @@ export async function exportAssessmentPdf(client: Client, a: Assessment) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
     doc.setTextColor(30, 41, 59);
-    doc.text('Suggested focus areas', margin, yPos);
+    doc.text('What to work on', margin, yPos);
     yPos += 16;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);

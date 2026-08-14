@@ -11,8 +11,17 @@ const VIEW_LABEL: Record<string, string> = {
   posterior: 'Back',
 };
 
+function niceDate(ms: number) {
+  return new Date(ms).toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 function optionLabel(a: Assessment) {
-  return `${VIEW_LABEL[a.view]} · ${new Date(a.createdAt).toLocaleDateString()} · ${a.score}`;
+  return `${VIEW_LABEL[a.view]} · ${niceDate(a.createdAt)} · ${a.score}`;
 }
 
 function Panel({
@@ -51,7 +60,7 @@ function Panel({
             {a.score}
           </span>
         </div>
-        <div className="text-xs text-slate-500">{new Date(a.createdAt).toLocaleString()}</div>
+        <div className="text-xs text-slate-500">{niceDate(a.createdAt)}</div>
       </div>
     </div>
   );
