@@ -178,7 +178,7 @@ export default function SyncButton() {
   return (
     <>
       <button className="btn-ghost h-9 max-w-[7rem] truncate" onClick={() => setOpen(true)}>
-        {user ? `👤 ${label}` : 'Sign in'}
+        {user ? label : 'Sign in'}
       </button>
       {open && createPortal(
         <div
