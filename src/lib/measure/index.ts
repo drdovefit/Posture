@@ -147,6 +147,33 @@ function analyzeLateral(lm: Landmarks): { metrics: Metric[]; specs: MetricSpec[]
     );
   }
 
+  if (have(lm.pelvisFront, lm.pelvisBack)) {
+    // Tilt of the ASIS(front)→PSIS(back) line. Positive = front hip drops below
+    // the back hip = anterior pelvic tilt; negative = posterior tilt. Level = 0.
+    const dxAbs = Math.max(Math.abs(lm.pelvisFront!.x - lm.pelvisBack!.x), 1e-6);
+    const drop = lm.pelvisFront!.y - lm.pelvisBack!.y; // +y is down the screen
+    const tilt = (Math.atan2(drop, dxAbs) * 180) / Math.PI;
+    push(
+      {
+        id: 'pelvicTilt',
+        label: 'Pelvic Tilt',
+        unit: '°',
+        band: { good: 6, mild: 14 },
+        weight: 1.2,
+        format: (v) =>
+          `${Math.abs(v).toFixed(1)}° ${v > 1 ? 'anterior' : v < -1 ? 'posterior' : 'neutral'}`,
+        normal: '0–6° (front & back hip roughly level)',
+        explain: (s, v) =>
+          s === 'good'
+            ? 'The pelvis is close to a neutral tilt.'
+            : v > 0
+              ? 'Anterior pelvic tilt: the front of the pelvis drops forward and down, arching the low back — often tight hip flexors with under-active glutes and deep core.'
+              : 'Posterior pelvic tilt: the pelvis is tucked under, flattening the low back — often tight hamstrings/abs with under-active hip flexors.',
+      },
+      tilt,
+    );
+  }
+
   if (have(lm.hip, lm.knee, lm.ankle)) {
     const dev = 180 - angleAtVertex(lm.knee!, lm.hip!, lm.ankle!);
     push(
@@ -325,7 +352,13 @@ function analyzeFrontal(lm: Landmarks): { metrics: Metric[]; specs: MetricSpec[]
 }
 
 /** Map a flagged metric to corrective-suggestion ids (see suggestions.ts). */
-function suggestionsForMetric(id: string): string[] {
+function suggestionsForMetric(id: string, value = 0): string[] {
+  // Pelvic tilt suggestions depend on direction (anterior vs posterior).
+  if (id === 'pelvicTilt') {
+    return value >= 0
+      ? ['hipFlexorStretch', 'gluteActivation', 'pelvicNeutralCue']
+      : ['hamstringMobility', 'hipFlexorActivation', 'pelvicNeutralCue'];
+  }
   const map: Record<string, string[]> = {
     forwardHead: ['chinTuck', 'chestOpener'],
     trunkLean: ['coreStability', 'hipFlexorStretch'],
@@ -361,7 +394,7 @@ export function analyze(view: ViewType, lm: Landmarks): AnalysisResult {
     new Set(
       metrics
         .filter((m) => m.severity !== 'good')
-        .flatMap((m) => suggestionsForMetric(m.id)),
+        .flatMap((m) => suggestionsForMetric(m.id, m.value)),
     ),
   );
 

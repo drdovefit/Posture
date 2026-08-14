@@ -22,6 +22,8 @@ const PLACEMENTS: Record<'lateral' | 'anterior', Placement[]> = {
     { slug: 'ear', label: 'Ear', where: 'On the tragus — the little flap in front of the ear canal (not the earlobe).' },
     { slug: 'shoulder', label: 'Shoulder', where: 'The bony tip of the shoulder (acromion), where the shoulder meets the arm.' },
     { slug: 'hip', label: 'Hip', where: 'The greater trochanter — the bony bump on the outer side of the upper thigh.' },
+    { slug: 'pelvisFront', label: 'Front hip (ASIS)', where: 'The bony point at the front of your pelvis (the "hip bone" below your belt line) — used to measure pelvic tilt.' },
+    { slug: 'pelvisBack', label: 'Back hip (PSIS)', where: 'The bony dimple at the back of your pelvis, level with your belt at the back — the other end of the tilt line.' },
     { slug: 'knee', label: 'Knee', where: 'The center of the knee joint line, just behind the kneecap.' },
     { slug: 'ankle', label: 'Ankle', where: 'The lateral malleolus — the ankle bone that sticks out, just above the foot.' },
   ],
@@ -88,6 +90,11 @@ export default function DotGuide({ view, open, onClose }: Props) {
             <p className="text-sm text-slate-500">
               For an accurate score, drag each dot to the exact spot. Zoom in with
               the + button for precision.
+            </p>
+            <p className="mt-1 rounded-lg bg-brand-50 px-2 py-1.5 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-200">
+              👕 Wear fitted clothing so your joints show — shorts or leggings and a
+              fitted top or sports bra. Baggy clothes hide the hips and shoulders and
+              throw the score off.
             </p>
           </div>
           <button

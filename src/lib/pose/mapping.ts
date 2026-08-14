@@ -44,12 +44,22 @@ function byScreen(raw: RawLandmark[], a: number, b: number): [Point, Point] {
  */
 export function mapLandmarks(raw: RawLandmark[], view: ViewType): Landmarks {
   if (view === 'lateral') {
+    const ear = morevisible(raw, IDX.earL, IDX.earR);
+    const hip = morevisible(raw, IDX.hipL, IDX.hipR);
+    // The pelvis tilt markers (ASIS front / PSIS back) aren't in the pose model,
+    // so seed them level around the hip. "Front" is guessed from which way the
+    // head faces (ear offset from the hip); the user drags them onto the real
+    // bony points. Starting level = neutral tilt until adjusted.
+    const frontSign = Math.sign(ear.x - hip.x) || 1;
+    const off = 0.06;
     return {
-      ear: morevisible(raw, IDX.earL, IDX.earR),
+      ear,
       shoulder: morevisible(raw, IDX.shoulderL, IDX.shoulderR),
-      hip: morevisible(raw, IDX.hipL, IDX.hipR),
+      hip,
       knee: morevisible(raw, IDX.kneeL, IDX.kneeR),
       ankle: morevisible(raw, IDX.ankleL, IDX.ankleR),
+      pelvisFront: { x: hip.x + frontSign * off, y: hip.y },
+      pelvisBack: { x: hip.x - frontSign * off, y: hip.y },
     };
   }
 
@@ -72,7 +82,8 @@ export function mapLandmarks(raw: RawLandmark[], view: ViewType): Landmarks {
 
 /** The landmark keys that are editable/drawn for a given view, in draw order. */
 export function keysForView(view: ViewType): (keyof Landmarks)[] {
-  if (view === 'lateral') return ['ear', 'shoulder', 'hip', 'knee', 'ankle'];
+  if (view === 'lateral')
+    return ['ear', 'shoulder', 'hip', 'pelvisFront', 'pelvisBack', 'knee', 'ankle'];
   return [
     'eyeL', 'eyeR',
     'earL', 'earR',
@@ -86,6 +97,7 @@ export function keysForView(view: ViewType): (keyof Landmarks)[] {
 /** Human labels for landmark keys (shown on hover / in the editor). */
 export const LANDMARK_LABELS: Record<string, string> = {
   ear: 'Ear', shoulder: 'Shoulder', hip: 'Hip', knee: 'Knee', ankle: 'Ankle',
+  pelvisFront: 'Front hip (ASIS)', pelvisBack: 'Back hip (PSIS)',
   eyeL: 'Left eye', eyeR: 'Right eye',
   earL: 'Left ear', earR: 'Right ear',
   shoulderL: 'Left shoulder', shoulderR: 'Right shoulder',
@@ -104,6 +116,8 @@ export function defaultLandmarks(view: ViewType): Landmarks {
       ear: { x: 0.5, y: 0.12 },
       shoulder: { x: 0.5, y: 0.28 },
       hip: { x: 0.5, y: 0.52 },
+      pelvisFront: { x: 0.56, y: 0.52 },
+      pelvisBack: { x: 0.44, y: 0.52 },
       knee: { x: 0.5, y: 0.74 },
       ankle: { x: 0.5, y: 0.94 },
     };

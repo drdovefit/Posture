@@ -22,6 +22,9 @@ export type LandmarkKey =
   | 'hip'
   | 'knee'
   | 'ankle'
+  // Lateral pelvis tilt markers (front = ASIS, back = PSIS)
+  | 'pelvisFront'
+  | 'pelvisBack'
   // Bilateral (front/back)
   | 'earL' | 'earR'
   | 'eyeL' | 'eyeR'

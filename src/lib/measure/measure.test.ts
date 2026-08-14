@@ -39,6 +39,40 @@ describe('analyze — lateral', () => {
     const r = analyze('lateral', { shoulder: { x: 0.5, y: 0.3 }, hip: { x: 0.5, y: 0.6 } });
     expect(r.metrics.map((m) => m.id)).toEqual(['trunkLean']);
   });
+
+  describe('pelvic tilt', () => {
+    const base: Landmarks = {
+      ...ideal,
+      pelvisFront: { x: 0.56, y: 0.5 },
+      pelvisBack: { x: 0.44, y: 0.5 },
+    };
+
+    it('reads a level pelvis as neutral / good', () => {
+      const r = analyze('lateral', base);
+      const t = r.metrics.find((m) => m.id === 'pelvicTilt')!;
+      expect(t.severity).toBe('good');
+      expect(t.display).toMatch(/neutral/);
+    });
+
+    it('detects anterior pelvic tilt (front hip drops) and suggests a fix', () => {
+      const ant: Landmarks = { ...base, pelvisFront: { x: 0.56, y: 0.54 } };
+      const r = analyze('lateral', ant);
+      const t = r.metrics.find((m) => m.id === 'pelvicTilt')!;
+      expect(t.value).toBeGreaterThan(0);
+      expect(t.severity).not.toBe('good');
+      expect(t.display).toMatch(/anterior/);
+      expect(r.suggestionIds).toContain('hipFlexorStretch');
+    });
+
+    it('detects posterior pelvic tilt (front hip rises)', () => {
+      const post: Landmarks = { ...base, pelvisFront: { x: 0.56, y: 0.46 } };
+      const r = analyze('lateral', post);
+      const t = r.metrics.find((m) => m.id === 'pelvicTilt')!;
+      expect(t.value).toBeLessThan(0);
+      expect(t.display).toMatch(/posterior/);
+      expect(r.suggestionIds).toContain('hamstringMobility');
+    });
+  });
 });
 
 describe('analyze — frontal', () => {

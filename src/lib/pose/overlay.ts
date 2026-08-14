@@ -60,14 +60,23 @@ export function buildOverlay(
       const b = lm[chain[i + 1]];
       if (a && b) segments.push(seg(a, b, COLORS.chain, chainWidth));
     }
-    // Red pelvis reference bar (like the reference image) at the hip.
-    if (lm.hip) {
+    // Pelvis tilt line between the front (ASIS) and back (PSIS) markers — this
+    // tilts with the pelvis so anterior/posterior tilt is visible. Falls back to
+    // a flat bar at the hip if the two markers aren't placed yet.
+    if (lm.pelvisFront && lm.pelvisBack) {
+      const c = severityColor(sev('pelvicTilt'));
+      segments.push(seg(lm.pelvisBack, lm.pelvisFront, c, levelWidth));
+    } else if (lm.hip) {
       const c = severityColor(sev('pelvisShift'));
       segments.push(
         seg({ x: lm.hip.x - 0.12, y: lm.hip.y }, { x: lm.hip.x + 0.12, y: lm.hip.y }, c, levelWidth),
       );
     }
     chain.forEach((k) => {
+      const p = lm[k];
+      if (p) dots.push({ key: k, p });
+    });
+    (['pelvisBack', 'pelvisFront'] as (keyof Landmarks)[]).forEach((k) => {
       const p = lm[k];
       if (p) dots.push({ key: k, p });
     });

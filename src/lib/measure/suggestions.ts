@@ -87,6 +87,27 @@ export const SUGGESTIONS: Record<string, Suggestion> = {
     detail:
       '90/90 hip rotations and figure-4 stretch to even out hip mobility and pelvic position.',
   },
+  hamstringMobility: {
+    id: 'hamstringMobility',
+    title: 'Hamstring mobility',
+    category: 'stretch',
+    detail:
+      'For a tucked (posterior) pelvis: hamstring stretches and hip hinges, 30s × 3, to free the pelvis to rotate back to neutral.',
+  },
+  hipFlexorActivation: {
+    id: 'hipFlexorActivation',
+    title: 'Hip-flexor activation',
+    category: 'strengthen',
+    detail:
+      'For a posterior tilt: standing marches and seated knee raises, 3×12, to wake up hip flexors that help restore the natural low-back curve.',
+  },
+  pelvicNeutralCue: {
+    id: 'pelvicNeutralCue',
+    title: 'Find neutral pelvis',
+    category: 'awareness',
+    detail:
+      'Rock the pelvis fully forward, then fully tucked, and settle in the middle. Practise breathing and standing there so neutral becomes your default.',
+  },
 };
 
 export function getSuggestions(ids: string[]): Suggestion[] {

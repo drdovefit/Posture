@@ -46,6 +46,34 @@ export default function PainPage() {
   const [severity, setSeverity] = useState(3);
   const [notes, setNotes] = useState('');
 
+  // Selection mode for bulk-deleting entries.
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+
+  function toggleSelected(id: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  async function deleteSelected() {
+    if (!selected.size) return;
+    await db.pain.bulkDelete([...selected]);
+    setSelected(new Set());
+    setSelecting(false);
+  }
+
+  async function deleteAll() {
+    const ids = (entries ?? []).map((e) => e.id!).filter(Boolean);
+    if (!ids.length) return;
+    if (!confirm(`Delete all ${ids.length} entries? This cannot be undone.`)) return;
+    await db.pain.bulkDelete(ids);
+    setSelected(new Set());
+    setSelecting(false);
+  }
+
   async function add() {
     if (activeId == null) return;
     const finalRegion =
@@ -166,26 +194,96 @@ export default function PainPage() {
         {!entries?.length ? (
           <div className="card p-8 text-center text-slate-500">No entries yet.</div>
         ) : (
-          entries.map((e) => (
-            <div key={e.id} className="card flex items-center gap-3 p-3">
-              <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-100 font-bold dark:bg-slate-800 ${sevColor(e.severity)}`}>
-                {e.severity}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{e.region}</span>
-                  <span className="text-xs text-slate-500">{e.date}</span>
+          <>
+            {/* Entries toolbar: enter select mode to bulk-delete. */}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+              <span className="text-sm font-semibold text-slate-500">
+                {selecting
+                  ? `${selected.size} selected`
+                  : `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`}
+              </span>
+              {selecting ? (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    className="btn-ghost !py-1 text-xs"
+                    onClick={() =>
+                      setSelected(
+                        selected.size === entries.length
+                          ? new Set()
+                          : new Set(entries.map((e) => e.id!)),
+                      )
+                    }
+                  >
+                    {selected.size === entries.length ? 'Clear all' : 'Select all'}
+                  </button>
+                  <button
+                    className="btn-ghost !py-1 text-xs !text-red-600 disabled:opacity-40"
+                    onClick={deleteSelected}
+                    disabled={!selected.size}
+                  >
+                    Delete selected
+                  </button>
+                  <button
+                    className="btn-ghost !py-1 text-xs !text-red-600"
+                    onClick={deleteAll}
+                  >
+                    Delete all
+                  </button>
+                  <button
+                    className="btn-ghost !py-1 text-xs"
+                    onClick={() => {
+                      setSelecting(false);
+                      setSelected(new Set());
+                    }}
+                  >
+                    Done
+                  </button>
                 </div>
-                {e.notes && <p className="truncate text-sm text-slate-500">{e.notes}</p>}
-              </div>
-              <button
-                className="btn-ghost !py-1 text-xs !text-red-600"
-                onClick={() => e.id && deletePain(e.id)}
-              >
-                Delete
-              </button>
+              ) : (
+                <button className="btn-ghost !py-1 text-xs" onClick={() => setSelecting(true)}>
+                  Select
+                </button>
+              )}
             </div>
-          ))
+
+            {entries.map((e) => (
+              <div
+                key={e.id}
+                className={`card flex items-center gap-3 p-3 ${
+                  selecting ? 'cursor-pointer' : ''
+                } ${e.id && selected.has(e.id) ? 'ring-2 ring-brand-500' : ''}`}
+                onClick={() => selecting && e.id && toggleSelected(e.id)}
+              >
+                {selecting && (
+                  <input
+                    type="checkbox"
+                    className="h-5 w-5 shrink-0 accent-brand-500"
+                    checked={!!e.id && selected.has(e.id)}
+                    onChange={() => e.id && toggleSelected(e.id)}
+                    onClick={(ev) => ev.stopPropagation()}
+                  />
+                )}
+                <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-100 font-bold dark:bg-slate-800 ${sevColor(e.severity)}`}>
+                  {e.severity}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{e.region}</span>
+                    <span className="text-xs text-slate-500">{e.date}</span>
+                  </div>
+                  {e.notes && <p className="truncate text-sm text-slate-500">{e.notes}</p>}
+                </div>
+                {!selecting && (
+                  <button
+                    className="btn-ghost !py-1 text-xs !text-red-600"
+                    onClick={() => e.id && deletePain(e.id)}
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            ))}
+          </>
         )}
       </div>
     </div>

@@ -72,15 +72,31 @@ export default function PostureEditor({
     setTy(0);
   }
 
-  function applyZoom(next: number) {
+  /**
+   * Zoom to `next`, keeping the image point under the focal point (fx, fy)
+   * (container-local px) fixed — so pinching zooms toward your fingers and the
+   * +/- buttons zoom toward the middle, instead of drifting to the corner.
+   */
+  function zoomAround(next: number, fx: number, fy: number) {
     const z = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(next * 10) / 10));
-    setZoom(z);
-    setTx((x) => clampPan(x, ty, z).x);
-    setTy((y) => clampPan(tx, y, z).y);
     if (z === 1) {
+      setZoom(1);
       setTx(0);
       setTy(0);
+      return;
     }
+    // Solve for the translation that pins (fx,fy) to the same image point.
+    const nx = fx - (z / zoom) * (fx - tx);
+    const ny = fy - (z / zoom) * (fy - ty);
+    const c = clampPan(nx, ny, z);
+    setZoom(z);
+    setTx(c.x);
+    setTy(c.y);
+  }
+
+  function applyZoom(next: number) {
+    const rect = containerRef.current?.getBoundingClientRect();
+    zoomAround(next, rect ? rect.width / 2 : 0, rect ? rect.height / 2 : 0);
   }
 
   // --- Pointer handling on the container (pan + pinch) -----------------------
@@ -107,7 +123,10 @@ export default function PostureEditor({
     if (pointers.current.size >= 2 && pinchStart.current) {
       const [a, b] = [...pointers.current.values()];
       const dist = Math.hypot(a.x - b.x, a.y - b.y);
-      applyZoom(pinchStart.current.zoom * (dist / pinchStart.current.dist));
+      const rect = containerRef.current?.getBoundingClientRect();
+      const fx = rect ? (a.x + b.x) / 2 - rect.left : 0;
+      const fy = rect ? (a.y + b.y) / 2 - rect.top : 0;
+      zoomAround(pinchStart.current.zoom * (dist / pinchStart.current.dist), fx, fy);
     } else if (pointers.current.size === 1 && zoom > 1) {
       const dx = e.clientX - prev.x;
       const dy = e.clientY - prev.y;
