@@ -44,6 +44,7 @@ interface Props {
 
 export default function DotGuide({ view, open, onClose }: Props) {
   const [brokenSrc, setBrokenSrc] = useState('');
+  const [clothingBroken, setClothingBroken] = useState(false);
   const [dontShow, setDontShow] = useState(false);
   const [gender, setGender] = useState<Gender>(
     () => (localStorage.getItem(GENDER_KEY) as Gender) || 'female',
@@ -67,6 +68,7 @@ export default function DotGuide({ view, open, onClose }: Props) {
   const rows = PLACEMENTS[localView];
   const viewSlug = localView === 'lateral' ? 'side' : 'front';
   const bigImg = `${import.meta.env.BASE_URL}brand/dots-${viewSlug}-${gender}.png`;
+  const clothingImg = `${import.meta.env.BASE_URL}brand/clothing-guide.png`;
 
   function handleGotIt() {
     if (dontShow) localStorage.setItem(HIDE_KEY, '1');
@@ -127,6 +129,14 @@ export default function DotGuide({ view, open, onClose }: Props) {
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto p-4">
+          {!clothingBroken && (
+            <img
+              src={clothingImg}
+              alt="What to wear: fitted clothing, not baggy"
+              className="mx-auto mb-4 w-full rounded-xl object-contain"
+              onError={() => setClothingBroken(true)}
+            />
+          )}
           {brokenSrc !== bigImg && (
             <img
               src={bigImg}
