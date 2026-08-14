@@ -83,40 +83,50 @@ export async function renderAnnotated(
     loadImage(storedBrandImage(BRAND_IMAGE_KEYS.qr) ?? `${base}brand/qr.png`),
   ]);
 
-  // Small wordmark in the top-left corner (transparent PNG), with a soft shadow
-  // so it stays readable over any photo.
-  if (wordmark && wordmark.naturalWidth) {
-    const wmW = W * 0.2;
-    const wmH = (wordmark.naturalHeight / wordmark.naturalWidth) * wmW;
-    const margin = W * 0.03;
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.35)';
-    ctx.shadowBlur = W * 0.01;
-    ctx.drawImage(wordmark, margin, margin, wmW, wmH);
-    ctx.restore();
-  }
+  // Bottom-right corner: the QR on a white rounded card (a quiet zone so it
+  // scans), with the small wordmark stacked directly beneath it.
+  const margin = W * 0.03;
+  const hasQr = !!(qr && qr.naturalWidth);
+  const qrSize = hasQr ? Math.max(90, W * 0.16) : 0;
+  const qrPad = qrSize * 0.09;
+  const cardW = qrSize + qrPad * 2;
 
-  // QR code in the bottom-right corner, on a white rounded card (a quiet zone
-  // so it scans). Only drawn if brand/qr.png exists.
-  if (qr && qr.naturalWidth) {
-    const size = Math.max(90, W * 0.16);
-    const pad = size * 0.09;
-    const margin = W * 0.03;
-    const cardW = size + pad * 2;
-    const cx = W - margin - cardW;
-    const cy = H - margin - cardW;
-    const r = size * 0.08;
+  const wmW = hasQr ? cardW : W * 0.2;
+  const wmH =
+    wordmark && wordmark.naturalWidth
+      ? (wordmark.naturalHeight / wordmark.naturalWidth) * wmW
+      : 0;
+  const gap = W * 0.012;
+
+  const rightX = W - margin;
+  const bottomY = H - margin;
+  const wmX = rightX - wmW;
+  const wmY = bottomY - wmH;
+
+  if (hasQr) {
+    const cardX = rightX - cardW;
+    const cardY = wmY - gap - cardW;
+    const r = qrSize * 0.08;
     ctx.save();
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.moveTo(cx + r, cy);
-    ctx.arcTo(cx + cardW, cy, cx + cardW, cy + cardW, r);
-    ctx.arcTo(cx + cardW, cy + cardW, cx, cy + cardW, r);
-    ctx.arcTo(cx, cy + cardW, cx, cy, r);
-    ctx.arcTo(cx, cy, cx + cardW, cy, r);
+    ctx.moveTo(cardX + r, cardY);
+    ctx.arcTo(cardX + cardW, cardY, cardX + cardW, cardY + cardW, r);
+    ctx.arcTo(cardX + cardW, cardY + cardW, cardX, cardY + cardW, r);
+    ctx.arcTo(cardX, cardY + cardW, cardX, cardY, r);
+    ctx.arcTo(cardX, cardY, cardX + cardW, cardY, r);
     ctx.closePath();
     ctx.fill();
-    ctx.drawImage(qr, cx + pad, cy + pad, size, size);
+    ctx.drawImage(qr, cardX + qrPad, cardY + qrPad, qrSize, qrSize);
+    ctx.restore();
+  }
+
+  // Wordmark (transparent PNG) with a soft shadow so it reads over any photo.
+  if (wordmark && wordmark.naturalWidth) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.35)';
+    ctx.shadowBlur = W * 0.01;
+    ctx.drawImage(wordmark, wmX, wmY, wmW, wmH);
     ctx.restore();
   }
 

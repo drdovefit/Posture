@@ -94,10 +94,6 @@ export default function PostureEditor({
     setTy(c.y);
   }
 
-  function applyZoom(next: number) {
-    const rect = containerRef.current?.getBoundingClientRect();
-    zoomAround(next, rect ? rect.width / 2 : 0, rect ? rect.height / 2 : 0);
-  }
 
   // --- Pointer handling on the container (pan + pinch) -----------------------
   function onContainerPointerDown(e: React.PointerEvent) {
@@ -238,26 +234,10 @@ export default function PostureEditor({
         </div>
       </div>
 
-      {/* Zoom controls: pinch to zoom, or use these; reset returns to 1×. */}
+      {/* Zoom controls: pinch to zoom; this shows the level and resets to 1×. */}
       {!readOnly && (
         <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-slate-900/80 p-1 text-white">
-          <button
-            type="button"
-            onClick={() => applyZoom(zoom - 0.5)}
-            className="grid h-8 w-8 place-items-center rounded-full text-lg hover:bg-white/20"
-            aria-label="Zoom out"
-          >
-            −
-          </button>
           <span className="w-9 text-center text-xs tabular-nums">{zoom.toFixed(1)}×</span>
-          <button
-            type="button"
-            onClick={() => applyZoom(zoom + 0.5)}
-            className="grid h-8 w-8 place-items-center rounded-full text-lg hover:bg-white/20"
-            aria-label="Zoom in"
-          >
-            +
-          </button>
           <button
             type="button"
             onClick={resetZoom}
