@@ -78,8 +78,8 @@ export default function SyncButton() {
     setBusy(true);
     setStatus('Syncing…');
     try {
-      const r = await syncAll(user.uid);
-      setStatus(`Synced ✓ (${r.pushed} up, ${r.pulled} down)`);
+      await syncAll(user.uid);
+      setStatus('Synced ✓ Your data is backed up.');
     } catch (e) {
       setStatus('Sync failed — check your connection and try again.');
       console.error(e);
