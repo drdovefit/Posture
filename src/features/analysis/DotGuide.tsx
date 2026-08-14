@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ViewType } from '../../lib/types';
-import { BRAND_IMAGE_KEYS, storedBrandImage } from '../../lib/brandImages';
 
 const HIDE_KEY = 'posturelab-dotguide-hidden';
 const GENDER_KEY = 'posturelab-gender';
@@ -45,7 +44,6 @@ interface Props {
 
 export default function DotGuide({ view, open, onClose }: Props) {
   const [brokenSrc, setBrokenSrc] = useState('');
-  const [clothingBroken, setClothingBroken] = useState(false);
   const [dontShow, setDontShow] = useState(false);
   const [gender, setGender] = useState<Gender>(
     () => (localStorage.getItem(GENDER_KEY) as Gender) || 'female',
@@ -69,9 +67,6 @@ export default function DotGuide({ view, open, onClose }: Props) {
   const rows = PLACEMENTS[localView];
   const viewSlug = localView === 'lateral' ? 'side' : 'front';
   const bigImg = `${import.meta.env.BASE_URL}brand/dots-${viewSlug}-${gender}.png`;
-  const clothingImg =
-    storedBrandImage(BRAND_IMAGE_KEYS.clothing) ??
-    `${import.meta.env.BASE_URL}brand/clothing-guide.png`;
 
   function handleGotIt() {
     if (dontShow) localStorage.setItem(HIDE_KEY, '1');
@@ -95,11 +90,6 @@ export default function DotGuide({ view, open, onClose }: Props) {
             <p className="text-sm text-slate-500">
               For an accurate score, drag each dot to the exact spot. Zoom in with
               the + button for precision.
-            </p>
-            <p className="mt-1 rounded-lg bg-brand-50 px-2 py-1.5 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-200">
-              👕 Wear fitted clothing so your joints show — shorts or leggings and a
-              fitted top or sports bra. Baggy clothes hide the hips and shoulders and
-              throw the score off.
             </p>
           </div>
           <button
@@ -132,14 +122,6 @@ export default function DotGuide({ view, open, onClose }: Props) {
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto p-4">
-          {!clothingBroken && (
-            <img
-              src={clothingImg}
-              alt="What to wear: fitted clothing, not baggy"
-              className="mx-auto mb-4 w-full rounded-xl object-contain"
-              onError={() => setClothingBroken(true)}
-            />
-          )}
           {brokenSrc !== bigImg && (
             <img
               src={bigImg}

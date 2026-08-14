@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BRAND_IMAGE_KEYS, storedBrandImage } from '../../lib/brandImages';
 
 type Tab = 'side' | 'front';
 
@@ -53,7 +54,10 @@ const steps = [
 
 export default function GuidePage() {
   const [tab, setTab] = useState<Tab>('side');
+  const [clothingBroken, setClothingBroken] = useState(false);
   const c = CONTENT[tab];
+  const clothingImg =
+    storedBrandImage(BRAND_IMAGE_KEYS.clothing) ?? `${BASE}brand/clothing-guide.png`;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -115,6 +119,24 @@ export default function GuidePage() {
             </dl>
           </div>
         </div>
+      </div>
+
+      <div className="card space-y-3 p-5">
+        <h2 className="text-lg font-bold">What to wear</h2>
+        <p className="text-sm text-slate-500">
+          Fitted clothing so your joints show — shorts or leggings with a fitted
+          top or sports bra. Baggy clothes hide the hips and shoulders and throw
+          the score off.
+        </p>
+        {!clothingBroken && (
+          <img
+            src={clothingImg}
+            alt="What to wear: fitted clothing, not baggy"
+            className="w-full rounded-xl object-contain"
+            loading="lazy"
+            onError={() => setClothingBroken(true)}
+          />
+        )}
       </div>
 
       <div>
