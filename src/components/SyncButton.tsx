@@ -10,6 +10,14 @@ import {
   doSignOut,
 } from '../state/auth';
 import { syncAll } from '../lib/sync';
+import {
+  preSigninBlock,
+  registerSigninFailure,
+  recordSigninSuccess,
+  preResetBlock,
+  recordResetSent,
+  resetCooldownRemaining,
+} from '../lib/authGuard';
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden>
@@ -30,6 +38,15 @@ export default function SyncButton() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  // Tick once a second so the reset cooldown countdown stays live.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!open) return;
+    const iv = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(iv);
+  }, [open]);
+  const resetWait = Math.ceil(resetCooldownRemaining(email.trim()) / 1000);
 
   async function runSync() {
     if (!user) return;
@@ -76,14 +93,23 @@ export default function SyncButton() {
   }
 
   async function handleEmail() {
+    const em = email.trim();
+    if (mode === 'signin') {
+      const blocked = preSigninBlock(em);
+      if (blocked) {
+        setStatus(blocked);
+        return;
+      }
+    }
     setBusy(true);
     setStatus('');
     try {
-      if (mode === 'signup') await signUpEmail(email.trim(), password);
-      else await signInEmail(email.trim(), password);
+      if (mode === 'signup') await signUpEmail(em, password);
+      else await signInEmail(em, password);
+      recordSigninSuccess(em);
       closeModal();
     } catch (e) {
-      setStatus(authErrorMessage(e));
+      setStatus(mode === 'signin' ? registerSigninFailure(em, e) : authErrorMessage(e));
       console.error(e);
     } finally {
       setBusy(false);
@@ -91,15 +117,22 @@ export default function SyncButton() {
   }
 
   async function handleReset() {
-    if (!email.trim()) {
+    const em = email.trim();
+    if (!em) {
       setStatus('Enter your email above, then tap “Forgot password?” again.');
+      return;
+    }
+    const blocked = preResetBlock(em);
+    if (blocked) {
+      setStatus(blocked);
       return;
     }
     setBusy(true);
     setStatus('');
     try {
-      await resetPassword(email.trim());
-      setStatus(`Password reset link sent to ${email.trim()} — check your inbox and spam.`);
+      await resetPassword(em);
+      recordResetSent(em);
+      setStatus(`Password reset link sent to ${em} — check your inbox and spam.`);
     } catch (e) {
       setStatus(authErrorMessage(e));
       console.error(e);
@@ -208,15 +241,20 @@ export default function SyncButton() {
                 </div>
 
                 <div className="flex flex-col items-center gap-1">
-                  {mode === 'signin' && (
-                    <button
-                      className="text-xs text-brand-600 hover:underline"
-                      onClick={handleReset}
-                      disabled={busy}
-                    >
-                      Forgot password?
-                    </button>
-                  )}
+                  {mode === 'signin' &&
+                    (resetWait > 0 ? (
+                      <span className="text-xs text-slate-400">
+                        Resend link in {resetWait}s
+                      </span>
+                    ) : (
+                      <button
+                        className="text-xs text-brand-600 hover:underline"
+                        onClick={handleReset}
+                        disabled={busy}
+                      >
+                        Forgot password?
+                      </button>
+                    ))}
                   <button
                     className="text-xs text-brand-600 hover:underline"
                     onClick={() => {
@@ -235,7 +273,7 @@ export default function SyncButton() {
             {status && (
               <p
                 className={`rounded-lg p-2 text-sm font-medium ${
-                  /fail|wrong|error|blocked|problem|isn’t|isn't|closed|doesn’t|doesn't/i.test(status)
+                  /fail|wrong|error|blocked|problem|isn’t|isn't|closed|doesn’t|doesn't|too many|attempt|locked|wait|paused/i.test(status)
                     ? 'border border-red-200 bg-red-50 text-red-700'
                     : 'bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-200'
                 }`}

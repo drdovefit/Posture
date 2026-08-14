@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   signInWithGoogle,
@@ -7,6 +7,14 @@ import {
   resetPassword,
   authErrorMessage,
 } from '../state/auth';
+import {
+  preSigninBlock,
+  registerSigninFailure,
+  recordSigninSuccess,
+  preResetBlock,
+  recordResetSent,
+  resetCooldownRemaining,
+} from '../lib/authGuard';
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden>
@@ -36,17 +44,25 @@ export default function SignInModal({ title, subtitle, onSignedIn, onClose }: Pr
   const [mode, setMode] = useState<'signin' | 'signup'>('signup');
 
   async function handleReset() {
-    if (!email.trim()) {
+    const em = email.trim();
+    if (!em) {
       setStatusOk(false);
       setStatus('Enter your email above, then tap “Forgot password?” again.');
+      return;
+    }
+    const blocked = preResetBlock(em);
+    if (blocked) {
+      setStatusOk(false);
+      setStatus(blocked);
       return;
     }
     setBusy(true);
     setStatus('');
     try {
-      await resetPassword(email.trim());
+      await resetPassword(em);
+      recordResetSent(em);
       setStatusOk(true);
-      setStatus(`Password reset link sent to ${email.trim()} — check your inbox and spam.`);
+      setStatus(`Password reset link sent to ${em} — check your inbox and spam.`);
     } catch (e) {
       setStatusOk(false);
       setStatus(authErrorMessage(e));
@@ -56,6 +72,14 @@ export default function SignInModal({ title, subtitle, onSignedIn, onClose }: Pr
   }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  // Tick once a second so the reset cooldown countdown stays live.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(iv);
+  }, []);
+  const resetWait = Math.ceil(resetCooldownRemaining(email.trim()) / 1000);
 
   async function handleGoogle() {
     setBusy(true);
@@ -73,15 +97,25 @@ export default function SignInModal({ title, subtitle, onSignedIn, onClose }: Pr
   }
 
   async function handleEmail() {
+    const em = email.trim();
+    if (mode === 'signin') {
+      const blocked = preSigninBlock(em);
+      if (blocked) {
+        setStatusOk(false);
+        setStatus(blocked);
+        return;
+      }
+    }
     setBusy(true);
     setStatus('');
     try {
-      if (mode === 'signup') await signUpEmail(email.trim(), password);
-      else await signInEmail(email.trim(), password);
+      if (mode === 'signup') await signUpEmail(em, password);
+      else await signInEmail(em, password);
+      recordSigninSuccess(em);
       onSignedIn();
     } catch (e) {
       setStatusOk(false);
-      setStatus(authErrorMessage(e));
+      setStatus(mode === 'signin' ? registerSigninFailure(em, e) : authErrorMessage(e));
       console.error(e);
     } finally {
       setBusy(false);
@@ -152,15 +186,18 @@ export default function SignInModal({ title, subtitle, onSignedIn, onClose }: Pr
         </div>
 
         <div className="flex flex-col items-center gap-1">
-          {mode === 'signin' && (
-            <button
-              className="text-xs text-brand-600 hover:underline"
-              onClick={handleReset}
-              disabled={busy}
-            >
-              Forgot password?
-            </button>
-          )}
+          {mode === 'signin' &&
+            (resetWait > 0 ? (
+              <span className="text-xs text-slate-400">Resend link in {resetWait}s</span>
+            ) : (
+              <button
+                className="text-xs text-brand-600 hover:underline"
+                onClick={handleReset}
+                disabled={busy}
+              >
+                Forgot password?
+              </button>
+            ))}
           <button
             className="text-xs text-brand-600 hover:underline"
             onClick={() => {

@@ -76,6 +76,8 @@ export function authErrorMessage(err: unknown): string {
       return 'Your browser blocked the sign-in popup — allow popups for this site and try again.';
     case 'auth/popup-closed-by-user':
       return 'The Google window was closed before sign-in finished.';
+    case 'auth/too-many-requests':
+      return 'Too many attempts. This account is temporarily paused — wait a bit or reset your password.';
     case 'auth/network-request-failed':
       return 'Network problem — check your connection and try again.';
     default:
