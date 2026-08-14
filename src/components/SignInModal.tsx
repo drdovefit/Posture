@@ -140,7 +140,7 @@ export default function SignInModal({ title, subtitle, onSignedIn, onClose }: Pr
         </button>
 
         {status && (
-          <p className="rounded-lg bg-brand-50 p-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-200">
+          <p className="rounded-lg border border-red-200 bg-red-50 p-2 text-sm font-medium text-red-700">
             {status}
           </p>
         )}

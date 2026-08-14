@@ -203,7 +203,13 @@ export default function SyncButton() {
             )}
 
             {status && (
-              <p className="rounded-lg bg-brand-50 p-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-200">
+              <p
+                className={`rounded-lg p-2 text-sm font-medium ${
+                  /fail|wrong|error|blocked|problem|isn’t|isn't|closed|doesn’t|doesn't/i.test(status)
+                    ? 'border border-red-200 bg-red-50 text-red-700'
+                    : 'bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-200'
+                }`}
+              >
                 {status}
               </p>
             )}

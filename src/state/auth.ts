@@ -61,8 +61,19 @@ export function authErrorMessage(err: unknown): string {
     case 'auth/wrong-password':
     case 'auth/user-not-found':
       return 'Wrong email or password.';
+    case 'auth/unauthorized-domain':
+      return 'This site isn’t authorized for Google sign-in yet. Add its domain in Firebase → Authentication → Settings → Authorized domains.';
+    case 'auth/operation-not-allowed':
+      return 'Google sign-in isn’t turned on for this project yet (Firebase → Authentication → Sign-in method).';
+    case 'auth/popup-blocked':
+    case 'auth/cancelled-popup-request':
+      return 'Your browser blocked the sign-in popup — allow popups for this site and try again.';
+    case 'auth/popup-closed-by-user':
+      return 'The Google window was closed before sign-in finished.';
+    case 'auth/network-request-failed':
+      return 'Network problem — check your connection and try again.';
     default:
-      return 'Something went wrong. Please try again.';
+      return 'Sign-in failed. Please try again.';
   }
 }
 
