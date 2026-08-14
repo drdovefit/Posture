@@ -9,9 +9,11 @@ import { getSuggestions } from '../../lib/measure/suggestions';
 import { scoreFeedback } from '../../lib/measure/feedback';
 import { saveAssessment } from '../../lib/db';
 import { useActiveClient } from '../../state/useClient';
+import { useAuth } from '../../state/auth';
 import PostureEditor from '../../components/PostureEditor';
 import MetricList from '../../components/MetricList';
 import ScoreRing from '../../components/ScoreRing';
+import SignInModal from '../../components/SignInModal';
 import CameraCapture from '../capture/CameraCapture';
 import DotGuide, { dotGuideHidden } from './DotGuide';
 
@@ -24,6 +26,9 @@ const VIEWS: { id: ViewType; label: string; hint: string }[] = [
 
 export default function AnalyzePage() {
   const { activeId } = useActiveClient();
+  const { user } = useAuth();
+  const [showSignIn, setShowSignIn] = useState(false);
+  const pendingSave = useRef(false);
   const navigate = useNavigate();
 
   const [view, setView] = useState<ViewType>('lateral');
@@ -46,6 +51,16 @@ export default function AnalyzePage() {
       if (imageUrl) URL.revokeObjectURL(imageUrl);
     };
   }, [imageUrl]);
+
+  // After a sign-in triggered by the Save button, complete the save once the
+  // auth state has propagated to this component.
+  useEffect(() => {
+    if (user && pendingSave.current) {
+      pendingSave.current = false;
+      save();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   // When the view is switched while editing, re-map landmarks for the new view.
   const firstRun = useRef(true);
@@ -134,6 +149,11 @@ export default function AnalyzePage() {
 
   async function save() {
     if (!imageBlob || !imgEl || activeId == null) return;
+    // Require an account before saving, so results sync and aren't lost.
+    if (!user) {
+      setShowSignIn(true);
+      return;
+    }
     const annotated = await renderAnnotated(imgEl, view, landmarks, result.metrics);
     await saveAssessment({
       clientId: activeId,
@@ -150,13 +170,28 @@ export default function AnalyzePage() {
     navigate('/history');
   }
 
-  async function downloadImage() {
+  // Share the annotated result — the OS share sheet lets them send it or save
+  // to Photos. Falls back to a direct download where sharing isn't supported.
+  async function shareImage() {
     if (!imgEl) return;
     const blob = await renderAnnotated(imgEl, view, landmarks, result.metrics);
+    const filename = `posturelab-${view}-${new Date().toISOString().slice(0, 10)}.png`;
+    const file = new File([blob], filename, { type: 'image/png' });
+    const nav = navigator as Navigator & {
+      canShare?: (data?: ShareData) => boolean;
+    };
+    if (nav.canShare?.({ files: [file] })) {
+      try {
+        await nav.share({ files: [file], title: 'My PostureLab result' });
+        return;
+      } catch (e) {
+        if ((e as { name?: string })?.name === 'AbortError') return; // user cancelled
+      }
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `posturelab-${view}-${new Date().toISOString().slice(0, 10)}.png`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -308,11 +343,18 @@ export default function AnalyzePage() {
               <h2 className="mb-1 font-semibold">Measurements</h2>
               <MetricList metrics={result.metrics} />
             </div>
-            <button className="btn-primary w-full" onClick={save} disabled={activeId == null}>
-              Save assessment
-            </button>
-            <button className="btn-ghost w-full" onClick={downloadImage}>
-              ⬇ Download image
+            <div>
+              <button className="btn-primary w-full" onClick={save} disabled={activeId == null}>
+                {user ? 'Save assessment' : 'Log in to save assessment'}
+              </button>
+              {!user && (
+                <p className="mt-1 text-center text-xs text-slate-400">
+                  Don't worry — you won't get any spam.
+                </p>
+              )}
+            </div>
+            <button className="btn-ghost w-full" onClick={shareImage}>
+              ⬆ Share / Save to Photos
             </button>
           </div>
           </div>
@@ -345,6 +387,18 @@ export default function AnalyzePage() {
       )}
 
       <DotGuide view={view} open={showDotGuide} onClose={() => setShowDotGuide(false)} />
+
+      {showSignIn && (
+        <SignInModal
+          title="Log in to save your assessment"
+          subtitle="Don't worry — you won't get any spam. It just keeps your results synced and safe."
+          onClose={() => setShowSignIn(false)}
+          onSignedIn={() => {
+            setShowSignIn(false);
+            pendingSave.current = true; // save once auth state propagates
+          }}
+        />
+      )}
 
       {showCamera && (
         <CameraCapture
