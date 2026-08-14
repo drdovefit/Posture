@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../lib/db';
 import { useActiveClient } from '../../state/useClient';
 import ScoreRing from '../../components/ScoreRing';
-import { useBlobUrl } from '../../state/useBlobUrl';
+import { useCroppedPortrait } from '../../state/useCroppedPortrait';
 import type { Assessment } from '../../lib/types';
 
 const VIEW_LABEL: Record<string, string> = {
@@ -13,11 +13,11 @@ const VIEW_LABEL: Record<string, string> = {
 };
 
 function RecentCard({ a }: { a: Assessment }) {
-  const url = useBlobUrl(a.annotated ?? a.photo);
+  const url = useCroppedPortrait(a);
   return (
     <Link to="/history" className="card overflow-hidden transition-transform hover:-translate-y-0.5">
-      <div className="aspect-[3/4] bg-black">
-        {url && <img src={url} alt="" className="h-full w-full object-contain" />}
+      <div className="aspect-[3/4] bg-slate-100 dark:bg-slate-800">
+        {url && <img src={url} alt="" className="h-full w-full object-cover" />}
       </div>
       <div className="flex items-center justify-between p-3">
         <div>

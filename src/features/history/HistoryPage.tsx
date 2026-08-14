@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { db, deleteAssessment } from '../../lib/db';
 import { useActiveClient } from '../../state/useClient';
 import { useBlobUrl } from '../../state/useBlobUrl';
+import { useCroppedPortrait } from '../../state/useCroppedPortrait';
 import { exportAssessmentPdf } from '../../lib/report/pdf';
 import MetricList from '../../components/MetricList';
 import ScoreRing from '../../components/ScoreRing';
@@ -17,13 +18,14 @@ const VIEW_LABEL: Record<string, string> = {
 };
 
 function Row({ a, client }: { a: Assessment; client: Client | null }) {
-  const url = useBlobUrl(a.annotated ?? a.photo);
+  const url = useBlobUrl(a.annotated ?? a.photo); // full image, for the download link
+  const thumb = useCroppedPortrait(a); // cropped to the body, for the thumbnail
   const [open, setOpen] = useState(false);
   return (
     <div className="card overflow-hidden">
       <div className="flex gap-4 p-4">
-        <div className="h-32 w-24 shrink-0 overflow-hidden rounded-lg bg-black">
-          {url && <img src={url} alt="" className="h-full w-full object-contain" />}
+        <div className="h-32 w-24 shrink-0 overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800">
+          {thumb && <img src={thumb} alt="" className="h-full w-full object-cover" />}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { Landmarks, ViewType } from '../../lib/types';
+import type { Landmarks, Point, ViewType } from '../../lib/types';
 import { analyze } from '../../lib/measure';
 import { detectPose } from '../../lib/pose/landmarker';
 import { defaultLandmarks, mapLandmarks } from '../../lib/pose/mapping';
@@ -142,6 +142,54 @@ export default function AnalyzePage() {
       setDetectMsg(raw ? 'Re-detected.' : 'No body detected.');
     } catch {
       setDetectMsg('Auto-detection unavailable.');
+    } finally {
+      setDetecting(false);
+    }
+  }
+
+  // Crop the photo tight to the detected body (with padding), then re-detect on
+  // the cropped image so the analysis and saved photo lose the empty background.
+  async function cropToPerson() {
+    if (!imgEl) return;
+    const pts = Object.values(landmarks).filter(Boolean) as Point[];
+    if (!pts.length) return;
+    const W = imgEl.naturalWidth;
+    const H = imgEl.naturalHeight;
+    const minX = Math.min(...pts.map((p) => p.x));
+    const maxX = Math.max(...pts.map((p) => p.x));
+    const minY = Math.min(...pts.map((p) => p.y));
+    const maxY = Math.max(...pts.map((p) => p.y));
+    const left = Math.max(0, minX - 0.08) * W;
+    const right = Math.min(1, maxX + 0.08) * W;
+    const top = Math.max(0, minY - 0.08) * H;
+    const bottom = Math.min(1, maxY + 0.06) * H;
+    const cw = Math.max(1, right - left);
+    const ch = Math.max(1, bottom - top);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(cw);
+    canvas.height = Math.round(ch);
+    canvas.getContext('2d')!.drawImage(imgEl, left, top, cw, ch, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob>((res) =>
+      canvas.toBlob((b) => res(b!), 'image/jpeg', 0.92),
+    );
+
+    if (imageUrl) URL.revokeObjectURL(imageUrl);
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.src = url;
+    await img.decode().catch(() => {});
+    setImageBlob(blob);
+    setImageUrl(url);
+    setImgEl(img);
+
+    setDetecting(true);
+    setDetectMsg('Re-detecting on the cropped photo…');
+    try {
+      const raw = await detectPose(img);
+      setLandmarks(raw ? mapLandmarks(raw, view) : defaultLandmarks(view));
+      setDetectMsg(raw ? 'Cropped — drag any point to fine-tune.' : 'Cropped — place the points.');
+    } catch {
+      setDetectMsg('Cropped.');
     } finally {
       setDetecting(false);
     }
@@ -327,6 +375,9 @@ export default function AnalyzePage() {
               <div className="ml-auto flex gap-2">
                 <button className="btn-ghost" onClick={() => setShowDotGuide(true)}>
                   ? Dot guide
+                </button>
+                <button className="btn-ghost" onClick={cropToPerson} disabled={detecting}>
+                  ⤢ Crop
                 </button>
                 <button className="btn-ghost" onClick={reDetect} disabled={detecting}>
                   {detecting ? 'Detecting…' : 'Re-detect'}

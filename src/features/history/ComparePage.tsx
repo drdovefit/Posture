@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../lib/db';
 import { useActiveClient } from '../../state/useClient';
-import type { Assessment, Point } from '../../lib/types';
+import { useCroppedPortrait } from '../../state/useCroppedPortrait';
+import type { Assessment } from '../../lib/types';
 
 const VIEW_LABEL: Record<string, string> = {
   anterior: 'Front',
@@ -10,72 +11,8 @@ const VIEW_LABEL: Record<string, string> = {
   posterior: 'Back',
 };
 
-const PANEL_ASPECT = 3 / 4; // width / height of each compare panel
-
 function optionLabel(a: Assessment) {
   return `${VIEW_LABEL[a.view]} · ${new Date(a.createdAt).toLocaleDateString()} · ${a.score}`;
-}
-
-/**
- * Crop an assessment image to the person — head-to-feet with a little padding,
- * based on the landmark bounding box — so both panels frame the body the same
- * way with no black bars, and the top of the head is never cut off. Uniform
- * scale: fits vertically to the body and center-crops the sides to fill the
- * panel. Optionally mirrors, for when a photo was shot facing the other way.
- */
-function useCroppedPortrait(a: Assessment | undefined, flip: boolean): string {
-  const [url, setUrl] = useState('');
-  const src = a?.annotated ?? a?.photo;
-  useEffect(() => {
-    let cancelled = false;
-    if (!a || !src) {
-      setUrl('');
-      return;
-    }
-    const objUrl = URL.createObjectURL(src);
-    const img = new Image();
-    img.onload = () => {
-      if (cancelled) return;
-      const W = img.naturalWidth;
-      const H = img.naturalHeight;
-      const pts = Object.values(a.landmarks ?? {}).filter(Boolean) as Point[];
-      let minX = 0, maxX = 1, minY = 0, maxY = 1;
-      if (pts.length) {
-        minX = Math.min(...pts.map((p) => p.x));
-        maxX = Math.max(...pts.map((p) => p.x));
-        minY = Math.min(...pts.map((p) => p.y));
-        maxY = Math.max(...pts.map((p) => p.y));
-      }
-      // Padding: extra room above the head and below the feet.
-      const topN = Math.max(0, minY - 0.06);
-      const botN = Math.min(1, maxY + 0.05);
-      const top = topN * H;
-      const cropH = Math.max(1, (botN - topN) * H);
-      const centerX = ((Math.max(0, minX - 0.04) + Math.min(1, maxX + 0.04)) / 2) * W;
-      let cropW = cropH * PANEL_ASPECT;
-      if (cropW > W) cropW = W; // can't be wider than the source image
-      const left = Math.min(Math.max(0, centerX - cropW / 2), Math.max(0, W - cropW));
-
-      const outH = Math.min(cropH, 1200);
-      const outW = outH * PANEL_ASPECT;
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.round(outW));
-      canvas.height = Math.max(1, Math.round(outH));
-      const ctx = canvas.getContext('2d')!;
-      if (flip) {
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
-      }
-      ctx.drawImage(img, left, top, cropW, cropH, 0, 0, canvas.width, canvas.height);
-      setUrl(canvas.toDataURL('image/png'));
-      URL.revokeObjectURL(objUrl);
-    };
-    img.src = objUrl;
-    return () => {
-      cancelled = true;
-    };
-  }, [a, src, flip]);
-  return url;
 }
 
 function Panel({
