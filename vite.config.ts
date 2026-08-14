@@ -13,20 +13,37 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg'],
+      includeAssets: ['favicon.png'],
       manifest: {
         name: 'PostureLab',
         short_name: 'PostureLab',
         description: 'Analyze posture from photos with AI landmark detection.',
         theme_color: '#0ea5e9',
-        background_color: '#0b1120',
+        background_color: '#ffffff',
         display: 'standalone',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
         ],
       },
-      workbox: { maximumFileSizeToCacheInBytes: 30 * 1024 * 1024 },
+      workbox: {
+        // Keep the precache to the app shell. The ~27MB pose model + wasm are
+        // NOT precached (that made every first visit download 24MB before the
+        // app was usable); they're runtime-cached on the first analysis instead.
+        globIgnores: ['**/models/**'],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.includes('/models/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'posture-model',
+              expiration: { maxEntries: 8, maxAgeSeconds: 60 * 60 * 24 * 90 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
     }),
   ],
   test: {

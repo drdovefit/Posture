@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Landmarks, Metric, Point, ViewType } from '../lib/types';
 import { buildOverlay, COLORS } from '../lib/pose/overlay';
 import { LANDMARK_LABELS } from '../lib/pose/mapping';
@@ -42,6 +42,41 @@ export default function PostureEditor({
   // Active touch/mouse pointers for pan & pinch (id -> last client position).
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinchStart = useRef<{ dist: number; zoom: number } | null>(null);
+
+  // Latest transform, read by the native wheel handler (avoids stale closures).
+  const viewRef = useRef({ zoom, tx, ty });
+  viewRef.current = { zoom, tx, ty };
+
+  // Desktop: mouse wheel / trackpad scroll zooms toward the cursor while the
+  // pointer is over the image (preventDefault stops the page from scrolling).
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || readOnly) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const fx = e.clientX - rect.left;
+      const fy = e.clientY - rect.top;
+      const { zoom: z0, tx: tx0, ty: ty0 } = viewRef.current;
+      const target = z0 * (e.deltaY < 0 ? 1.12 : 1 / 1.12);
+      const z = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(target * 100) / 100));
+      if (z === z0) return;
+      if (z <= 1) {
+        setZoom(1);
+        setTx(0);
+        setTy(0);
+        return;
+      }
+      const nx = fx - (z / z0) * (fx - tx0);
+      const ny = fy - (z / z0) * (fy - ty0);
+      const c = clampPan(nx, ny, z);
+      setZoom(z);
+      setTx(c.x);
+      setTy(c.y);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [readOnly]);
 
   const overlay = buildOverlay(view, landmarks, metrics);
   const activeKey = dragKey ?? hoverKey;

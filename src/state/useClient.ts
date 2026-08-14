@@ -16,10 +16,20 @@ export function useActiveClient() {
   });
 
   useEffect(() => {
-    if (activeId == null && clients && clients.length === 0) {
-      ensureDefaultClient().then((id) => setActiveId(id));
-    } else if (activeId == null && clients && clients.length > 0) {
+    if (!clients) return;
+    // No client selected yet: create the default "Me" or pick the first one.
+    if (activeId == null) {
+      if (clients.length === 0) ensureDefaultClient().then((id) => setActiveId(id));
+      else setActiveId(clients[0].id!);
+      return;
+    }
+    // Selected id points at a client that no longer exists (e.g. data cleared
+    // on this device, or a stale localStorage id): reconcile instead of leaving
+    // the app with no usable client and Save disabled.
+    if (clients.length > 0 && !clients.some((c) => c.id === activeId)) {
       setActiveId(clients[0].id!);
+    } else if (clients.length === 0) {
+      ensureDefaultClient().then((id) => setActiveId(id));
     }
   }, [clients, activeId]);
 

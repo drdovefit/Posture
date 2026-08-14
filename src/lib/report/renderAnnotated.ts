@@ -83,30 +83,30 @@ export async function renderAnnotated(
     loadImage(storedBrandImage(BRAND_IMAGE_KEYS.qr) ?? `${base}brand/qr.png`),
   ]);
 
-  // Bottom-right corner: the QR on a white rounded card (a quiet zone so it
-  // scans), with the small wordmark stacked directly beneath it.
-  const margin = W * 0.03;
+  // Bottom-right corner: a small QR on a tight white card (just enough quiet
+  // zone to scan), with the wordmark stacked directly beneath it. Kept compact
+  // so it doesn't cover someone standing toward the right of the frame.
+  const margin = W * 0.025;
   const hasQr = !!(qr && qr.naturalWidth);
-  const qrSize = hasQr ? Math.max(90, W * 0.16) : 0;
-  const qrPad = qrSize * 0.09;
+  const qrSize = hasQr ? Math.max(64, W * 0.1) : 0;
+  const qrPad = qrSize * 0.05;
   const cardW = qrSize + qrPad * 2;
 
-  const wmW = hasQr ? cardW : W * 0.2;
+  const wmW = hasQr ? cardW * 0.92 : W * 0.16;
   const wmH =
     wordmark && wordmark.naturalWidth
       ? (wordmark.naturalHeight / wordmark.naturalWidth) * wmW
       : 0;
-  const gap = W * 0.012;
+  const gap = W * 0.008;
 
-  const rightX = W - margin;
   const bottomY = H - margin;
-  const wmX = rightX - wmW;
+  const cardX = W - margin - cardW;
   const wmY = bottomY - wmH;
+  const wmX = cardX + (cardW - wmW) / 2;
 
   if (hasQr) {
-    const cardX = rightX - cardW;
     const cardY = wmY - gap - cardW;
-    const r = qrSize * 0.08;
+    const r = qrSize * 0.06;
     ctx.save();
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
@@ -125,7 +125,7 @@ export async function renderAnnotated(
   if (wordmark && wordmark.naturalWidth) {
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.35)';
-    ctx.shadowBlur = W * 0.01;
+    ctx.shadowBlur = W * 0.008;
     ctx.drawImage(wordmark, wmX, wmY, wmW, wmH);
     ctx.restore();
   }
