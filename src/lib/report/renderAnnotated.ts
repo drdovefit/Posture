@@ -83,53 +83,47 @@ export async function renderAnnotated(
     loadImage(storedBrandImage(BRAND_IMAGE_KEYS.qr) ?? `${base}brand/qr.png`),
   ]);
 
-  // Bottom-right corner: a small QR on a tight white card (just enough quiet
-  // zone to scan), with the wordmark stacked directly beneath it. Kept compact
-  // so it doesn't cover someone standing toward the right of the frame.
-  const margin = W * 0.025;
+  // Bottom-right badge: the QR and the wordmark together on one white rounded
+  // card, so the branding is always clearly visible over any photo (dark text
+  // on a dark background used to disappear). Sized generously so it reads.
+  const margin = W * 0.03;
   const hasQr = !!(qr && qr.naturalWidth);
-  const qrSize = hasQr ? Math.max(64, W * 0.1) : 0;
-  const qrPad = qrSize * 0.05;
-  const cardW = qrSize + qrPad * 2;
+  const hasWm = !!(wordmark && wordmark.naturalWidth);
+  if (hasQr || hasWm) {
+    const contentW = W * 0.17; // QR + wordmark share this width
+    const pad = contentW * 0.1;
+    const gap = contentW * 0.07;
+    const qrH = hasQr ? contentW : 0;
+    const wmH = hasWm ? (wordmark!.naturalHeight / wordmark!.naturalWidth) * contentW : 0;
+    const cardW = contentW + pad * 2;
+    const cardH = pad + qrH + (hasQr && hasWm ? gap : 0) + wmH + pad;
+    const cardX = W - margin - cardW;
+    const cardY = H - margin - cardH;
+    const r = contentW * 0.09;
 
-  const wmW = hasQr ? cardW * 0.92 : W * 0.16;
-  const wmH =
-    wordmark && wordmark.naturalWidth
-      ? (wordmark.naturalHeight / wordmark.naturalWidth) * wmW
-      : 0;
-  const gap = W * 0.008;
-
-  const bottomY = H - margin;
-  const cardX = W - margin - cardW;
-  const wmY = bottomY - wmH;
-  // Keep the wordmark fully on-screen: centered under the QR card when there is
-  // one, otherwise flush to the right margin (never hanging off the edge).
-  const wmX = hasQr ? cardX + (cardW - wmW) / 2 : W - margin - wmW;
-
-  if (hasQr) {
-    const cardY = wmY - gap - cardW;
-    const r = qrSize * 0.06;
     ctx.save();
     ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0,0,0,0.22)';
+    ctx.shadowBlur = W * 0.01;
+    ctx.shadowOffsetY = W * 0.002;
     ctx.beginPath();
     ctx.moveTo(cardX + r, cardY);
-    ctx.arcTo(cardX + cardW, cardY, cardX + cardW, cardY + cardW, r);
-    ctx.arcTo(cardX + cardW, cardY + cardW, cardX, cardY + cardW, r);
-    ctx.arcTo(cardX, cardY + cardW, cardX, cardY, r);
+    ctx.arcTo(cardX + cardW, cardY, cardX + cardW, cardY + cardH, r);
+    ctx.arcTo(cardX + cardW, cardY + cardH, cardX, cardY + cardH, r);
+    ctx.arcTo(cardX, cardY + cardH, cardX, cardY, r);
     ctx.arcTo(cardX, cardY, cardX + cardW, cardY, r);
     ctx.closePath();
     ctx.fill();
-    ctx.drawImage(qr, cardX + qrPad, cardY + qrPad, qrSize, qrSize);
     ctx.restore();
-  }
 
-  // Wordmark (transparent PNG) with a soft shadow so it reads over any photo.
-  if (wordmark && wordmark.naturalWidth) {
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.35)';
-    ctx.shadowBlur = W * 0.008;
-    ctx.drawImage(wordmark, wmX, wmY, wmW, wmH);
-    ctx.restore();
+    let cy = cardY + pad;
+    if (hasQr) {
+      ctx.drawImage(qr!, cardX + pad, cy, contentW, qrH);
+      cy += qrH + gap;
+    }
+    if (hasWm) {
+      ctx.drawImage(wordmark!, cardX + pad, cy, contentW, wmH);
+    }
   }
 
   return await new Promise<Blob>((resolve) =>
