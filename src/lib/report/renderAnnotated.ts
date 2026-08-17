@@ -90,7 +90,7 @@ export async function renderAnnotated(
   const hasQr = !!(qr && qr.naturalWidth);
   const hasWm = !!(wordmark && wordmark.naturalWidth);
   if (hasQr || hasWm) {
-    const contentW = W * 0.17; // QR + wordmark share this width
+    const contentW = W * 0.22; // QR + wordmark share this width
     const pad = contentW * 0.1;
     const gap = contentW * 0.07;
     const qrH = hasQr ? contentW : 0;
