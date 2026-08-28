@@ -1,7 +1,10 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../lib/db';
 import { useActiveClient } from '../../state/useClient';
+import { useAuth } from '../../state/auth';
+import { pickGreeting } from '../../lib/greetings';
 import ScoreRing from '../../components/ScoreRing';
 import { useCroppedPortrait } from '../../state/useCroppedPortrait';
 import { analyze } from '../../lib/measure';
@@ -37,7 +40,10 @@ function RecentCard({ a }: { a: Assessment }) {
 }
 
 export default function DashboardPage() {
-  const { active, activeId } = useActiveClient();
+  const { activeId } = useActiveClient();
+  const { user } = useAuth();
+  const firstName = user?.displayName?.trim().split(/\s+/)[0];
+  const greeting = useMemo(() => pickGreeting(firstName), [firstName]);
   const assessments = useLiveQuery(
     () =>
       activeId == null
@@ -59,10 +65,8 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Hi{active ? `, ${active.name}` : ''} 👋</h1>
-          <p className="text-sm text-slate-500">
-            Your posture at a glance. Everything stays private on this device.
-          </p>
+          <h1 className="text-2xl font-bold">{firstName ? `Hi ${firstName}` : 'Hey there'}</h1>
+          <p className="text-sm text-slate-500">{greeting}</p>
         </div>
         <Link to="/analyze" className="btn-primary">
           ＋ New analysis
