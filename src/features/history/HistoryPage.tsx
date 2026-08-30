@@ -45,7 +45,11 @@ function Row({ a, client }: { a: Assessment; client: Client | null }) {
           <div className="flex items-center gap-2">
             <span className="font-semibold">{VIEW_LABEL[a.view]} view</span>
             <span className="text-xs text-slate-500">
-              {new Date(a.createdAt).toLocaleString()}
+              {new Date(a.createdAt).toLocaleDateString(undefined, {
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+              })}
             </span>
           </div>
           <div className="mt-1 flex flex-wrap gap-1.5">
