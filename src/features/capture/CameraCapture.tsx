@@ -32,6 +32,7 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
   const [showGuide, setShowGuide] = useState(false);
   const [lowLight, setLowLight] = useState(false);
   const [frameTip, setFrameTip] = useState<string | null>(null);
+  const [fitMode, setFitMode] = useState<'cover' | 'contain'>('cover');
 
   const viewLabel = view === 'lateral' ? 'Side view' : 'Front view';
   const guideTips =
@@ -124,22 +125,24 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
   }, [error, view]);
 
   function grabFrame(el: HTMLVideoElement, maxW = 1400): Promise<Blob> {
-    // The preview fills the screen (object-cover), showing a centered crop of
-    // the camera frame. Capture that same crop so the photo matches the preview.
+    // Capture matches the preview: when filling the screen (cover) we grab the
+    // same centered crop; when zoom is reset (contain) we grab the full frame.
     const vw = el.videoWidth || 1080;
     const vh = el.videoHeight || 1920;
-    const boxAspect = (el.clientWidth || vw) / (el.clientHeight || vh);
-    const srcAspect = vw / vh;
     let sx = 0;
     let sy = 0;
     let sw = vw;
     let sh = vh;
-    if (srcAspect > boxAspect) {
-      sw = Math.round(vh * boxAspect);
-      sx = Math.round((vw - sw) / 2);
-    } else {
-      sh = Math.round(vw / boxAspect);
-      sy = Math.round((vh - sh) / 2);
+    if (fitMode === 'cover') {
+      const boxAspect = (el.clientWidth || vw) / (el.clientHeight || vh);
+      const srcAspect = vw / vh;
+      if (srcAspect > boxAspect) {
+        sw = Math.round(vh * boxAspect);
+        sx = Math.round((vw - sw) / 2);
+      } else {
+        sh = Math.round(vw / boxAspect);
+        sy = Math.round((vh - sh) / 2);
+      }
     }
     const scale = Math.min(1, maxW / sw);
     const canvas = document.createElement('canvas');
@@ -188,7 +191,7 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
               ref={videoRef}
               playsInline
               muted
-              className="h-full w-full object-cover"
+              className={`h-full w-full ${fitMode === 'cover' ? 'object-cover' : 'object-contain'}`}
               style={{ transform: previewTransform, transformOrigin: 'center' }}
             />
 
@@ -230,6 +233,13 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
               title="Flip camera"
             >
               ⟲
+            </button>
+
+            <button
+              onClick={() => setFitMode((m) => (m === 'cover' ? 'contain' : 'cover'))}
+              className="absolute bottom-4 left-4 rounded-full bg-black/60 px-3 py-1.5 text-xs font-medium text-white"
+            >
+              {fitMode === 'cover' ? 'Reset zoom' : 'Fill screen'}
             </button>
 
             <div className="pointer-events-none absolute inset-x-0 bottom-4 text-center">
