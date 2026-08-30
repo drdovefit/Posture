@@ -5,6 +5,7 @@ import { analyze } from '../../lib/measure';
 import { detectPose, type RawLandmark } from '../../lib/pose/landmarker';
 import { defaultLandmarks, mapLandmarks } from '../../lib/pose/mapping';
 import { photoWarnings } from '../../lib/pose/photoQuality';
+import { classifyAnimal } from '../../lib/pose/animalDetect';
 
 /** Average detector confidence across the main body joints (0..1). */
 function detectionConfidence(raw: RawLandmark[]): number {
@@ -46,6 +47,8 @@ interface Shot {
   warnings?: string[];
   /** False when detection found no body (score is meaningless until adjusted). */
   detected: boolean;
+  /** Easter egg: set when the photo is confidently a cat or dog, not a person. */
+  animal?: 'cat' | 'dog';
   savedId?: number;
 }
 
@@ -70,6 +73,17 @@ export default function AnalyzePage() {
     [view, shot?.landmarks],
   );
   const suggestions = getSuggestions(result.suggestionIds);
+
+  // Easter egg: stable "meow"/"woof" lines when the photo is a cat or dog.
+  const animal = shot?.animal;
+  const animalLines = useMemo(() => {
+    if (!animal) return [] as { a: string; b: string }[];
+    const w = animal === 'dog' ? 'woof' : 'meow';
+    const rand = () => Array.from({ length: 1 + Math.floor(Math.random() * 3) }, () => w).join(' ');
+    const rows = result.metrics.length || 6;
+    return Array.from({ length: rows }, () => ({ a: rand(), b: rand() }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animal, result.metrics.length]);
 
   function patchShot(v: ViewType, patch: Partial<Shot>) {
     setShots((prev) => {
@@ -99,18 +113,22 @@ export default function AnalyzePage() {
     try {
       const raw = await detectPose(img);
       const landmarks = raw ? mapLandmarks(raw, forView) : defaultLandmarks(forView);
+      const animal = raw ? undefined : (await classifyAnimal(img)) ?? undefined;
       patchShot(forView, {
         landmarks,
         detected: !!raw,
+        animal,
         detectMsg: raw
           ? 'Drag any point to fine-tune.'
-          : 'No body found. Drag the points onto your joints.',
+          : animal
+            ? ''
+            : 'No body found. Drag the points onto your joints.',
         warnings: raw
           ? photoWarnings(img, landmarks, forView, {
               confidence: detectionConfidence(raw),
               shoulderSep: shoulderSeparation(raw),
             })
-          : photoWarnings(img, landmarks, forView),
+          : [],
       });
     } catch {
       patchShot(forView, {
@@ -167,10 +185,12 @@ export default function AnalyzePage() {
     try {
       const raw = await detectPose(s.imgEl);
       const landmarks = raw ? mapLandmarks(raw, view) : defaultLandmarks(view);
+      const animal = raw ? undefined : (await classifyAnimal(s.imgEl)) ?? undefined;
       patchShot(view, {
         landmarks,
         detected: !!raw,
-        detectMsg: raw ? 'Points updated.' : 'No body found.',
+        animal,
+        detectMsg: raw ? 'Points updated.' : animal ? '' : 'No body found.',
         warnings: raw
           ? photoWarnings(s.imgEl, landmarks, view, {
               confidence: detectionConfidence(raw),
@@ -394,7 +414,26 @@ export default function AnalyzePage() {
 
             <div className="space-y-4">
               <div className="card flex items-center gap-4 p-4">
-                {shot.detected === false ? (
+                {shot.animal ? (
+                  <>
+                    <ScoreRing
+                      score={100}
+                      size={96}
+                      label=""
+                      centerContent={
+                        <span className="text-4xl" aria-hidden>
+                          {shot.animal === 'cat' ? '🐱' : '🐶'}
+                        </span>
+                      }
+                    />
+                    <div className="text-sm">
+                      <div className="font-semibold">
+                        {shot.animal === 'cat' ? 'Cat detected' : 'Dog detected'}
+                      </div>
+                      <p className="mt-0.5 text-slate-500">{animalLines[0]?.a}</p>
+                    </div>
+                  </>
+                ) : shot.detected === false ? (
                   <>
                     <ScoreRing
                       score={0}
@@ -436,7 +475,18 @@ export default function AnalyzePage() {
               </div>
               <div className="card p-4">
                 <h2 className="mb-1 font-semibold">Measurements</h2>
-                <MetricList metrics={result.metrics} />
+                {shot.animal ? (
+                  <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {animalLines.map((l, i) => (
+                      <li key={i} className="flex items-center justify-between py-3 text-sm">
+                        <span className="font-medium">{l.a}</span>
+                        <span className="text-slate-500">{l.b}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <MetricList metrics={result.metrics} />
+                )}
               </div>
               <div>
                 <button className="btn-primary w-full" onClick={save} disabled={activeId == null}>
@@ -489,7 +539,7 @@ export default function AnalyzePage() {
             </div>
           )}
 
-          {suggestions.length > 0 && (
+          {!shot.animal && suggestions.length > 0 && (
             <div className="card p-4">
               <div className="mb-3">
                 <h2 className="font-semibold">Suggested focus areas</h2>
