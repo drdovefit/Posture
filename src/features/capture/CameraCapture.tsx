@@ -192,8 +192,8 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
 
             {lowLight && (
               <div className="pointer-events-none absolute left-1/2 top-20 -translate-x-1/2">
-                <div className="flex items-center gap-2 rounded-full bg-amber-400/95 px-4 py-1.5 text-sm font-semibold text-black shadow-lg">
-                  <span aria-hidden>🔅</span> Low light. Find a brighter spot.
+                <div className="flex items-center gap-1.5 rounded-full bg-amber-400/45 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                  <span aria-hidden>🔅</span> Low light
                 </div>
               </div>
             )}
