@@ -2,9 +2,22 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Landmarks, ViewType } from '../../lib/types';
 import { analyze } from '../../lib/measure';
-import { detectPose } from '../../lib/pose/landmarker';
+import { detectPose, type RawLandmark } from '../../lib/pose/landmarker';
 import { defaultLandmarks, mapLandmarks } from '../../lib/pose/mapping';
 import { photoWarnings } from '../../lib/pose/photoQuality';
+
+/** Average detector confidence across the main body joints (0..1). */
+function detectionConfidence(raw: RawLandmark[]): number {
+  const idx = [11, 12, 23, 24, 25, 26, 27, 28];
+  const vals = idx.map((i) => raw[i]?.visibility ?? 0);
+  return vals.reduce((s, v) => s + v, 0) / vals.length;
+}
+
+/** Shoulder separation (normalized x), used to sanity-check the chosen view. */
+function shoulderSeparation(raw: RawLandmark[]): number | undefined {
+  if (!raw[11] || !raw[12]) return undefined;
+  return Math.abs(raw[11].x - raw[12].x);
+}
 import { renderAnnotated } from '../../lib/report/renderAnnotated';
 import { getSuggestions } from '../../lib/measure/suggestions';
 import { scoreFeedback } from '../../lib/measure/feedback';
@@ -89,7 +102,12 @@ export default function AnalyzePage() {
         detectMsg: raw
           ? 'Drag any point to fine-tune.'
           : 'No body found. Drag the points onto your joints.',
-        warnings: photoWarnings(img, landmarks, forView),
+        warnings: raw
+          ? photoWarnings(img, landmarks, forView, {
+              confidence: detectionConfidence(raw),
+              shoulderSep: shoulderSeparation(raw),
+            })
+          : photoWarnings(img, landmarks, forView),
       });
     } catch {
       patchShot(forView, {
@@ -145,9 +163,16 @@ export default function AnalyzePage() {
     patchShot(view, { detectMsg: 'Re-detecting…' });
     try {
       const raw = await detectPose(s.imgEl);
+      const landmarks = raw ? mapLandmarks(raw, view) : defaultLandmarks(view);
       patchShot(view, {
-        landmarks: raw ? mapLandmarks(raw, view) : defaultLandmarks(view),
+        landmarks,
         detectMsg: raw ? 'Points updated.' : 'No body found.',
+        warnings: raw
+          ? photoWarnings(s.imgEl, landmarks, view, {
+              confidence: detectionConfidence(raw),
+              shoulderSep: shoulderSeparation(raw),
+            })
+          : photoWarnings(s.imgEl, landmarks, view),
       });
     } catch {
       patchShot(view, { detectMsg: 'Detection unavailable.' });

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ViewType } from '../../lib/types';
+import { imageBrightness } from '../../lib/pose/photoQuality';
 
 interface Props {
   view: ViewType;
@@ -27,6 +28,7 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
   const [timer, setTimer] = useState(0);
   const [countdown, setCountdown] = useState(0);
   const [showGuide, setShowGuide] = useState(false);
+  const [lowLight, setLowLight] = useState(false);
 
   const viewLabel = view === 'lateral' ? 'Side view' : 'Front view';
   const guideTips =
@@ -71,6 +73,19 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
     return () => streamRef.current?.getTracks().forEach((t) => t.stop());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facing]);
+
+  // Live low-light check: sample the preview a few times a second and toggle
+  // the on-camera bubble, so it appears while it's dark and clears when it isn't.
+  useEffect(() => {
+    if (error) return;
+    const iv = setInterval(() => {
+      const el = videoRef.current;
+      if (!el || el.videoWidth === 0) return;
+      const b = imageBrightness(el);
+      if (b != null) setLowLight(b < 55);
+    }, 700);
+    return () => clearInterval(iv);
+  }, [error]);
 
   function grabFrame(el: HTMLVideoElement, maxW = 1400): Promise<Blob> {
     const vw = el.videoWidth || 1080;
@@ -191,6 +206,14 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
                   : 'Face the camera, arms relaxed'}
               </span>
             </div>
+
+            {lowLight && (
+              <div className="pointer-events-none absolute left-1/2 top-20 -translate-x-1/2">
+                <div className="flex items-center gap-2 rounded-full bg-amber-400/95 px-4 py-1.5 text-sm font-semibold text-black shadow-lg">
+                  <span aria-hidden>🔅</span> Low light. Find a brighter spot.
+                </div>
+              </div>
+            )}
 
             {countdown > 0 && (
               <div className="absolute inset-0 grid place-items-center">
