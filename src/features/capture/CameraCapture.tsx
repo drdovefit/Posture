@@ -24,6 +24,7 @@ const TIMERS = [0, 3, 10, 15, 30];
 export default function CameraCapture({ view, onCapture, onClose, onViewChange }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [error, setError] = useState('');
   const [facing, setFacing] = useState<Facing>('user');
@@ -135,6 +136,11 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
     };
   }, [error, view]);
 
+  // Clear any running timer countdown on unmount.
+  useEffect(() => () => {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+  }, []);
+
   function grabFrame(el: HTMLVideoElement, maxW = 1400): Promise<Blob> {
     // Capture the same centered crop the screen shows (object-cover).
     const vw = el.videoWidth || 1080;
@@ -168,16 +174,20 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
   async function shootNow() {
     if (videoRef.current) onCapture(await grabFrame(videoRef.current));
   }
+  function cancelCountdown() {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    countdownRef.current = null;
+    setCountdown(0);
+  }
   function shoot() {
     if (timer > 0) {
       let n = timer;
       setCountdown(n);
-      const iv = setInterval(() => {
+      countdownRef.current = setInterval(() => {
         n -= 1;
         setCountdown(n);
         if (n <= 0) {
-          clearInterval(iv);
-          setCountdown(0);
+          cancelCountdown();
           shootNow();
         }
       }, 1000);
@@ -195,13 +205,17 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
           </div>
         ) : (
           <>
-            <video
-              ref={videoRef}
-              playsInline
-              muted
-              className="h-full w-full object-cover"
-              style={{ transform: previewTransform, transformOrigin: 'center' }}
-            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="relative aspect-[3/4] max-h-full max-w-full overflow-hidden">
+                <video
+                  ref={videoRef}
+                  playsInline
+                  muted
+                  className="h-full w-full object-cover"
+                  style={{ transform: previewTransform, transformOrigin: 'center' }}
+                />
+              </div>
+            </div>
 
             {/* Vertical guide line. */}
             <div className="pointer-events-none absolute inset-0">
@@ -266,9 +280,25 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
               </div>
             )}
 
-            {countdown > 0 && (
-              <div className="absolute inset-0 grid place-items-center">
-                <span className="text-8xl font-bold text-white drop-shadow-lg">{countdown}</span>
+            {(countdown > 0 || timer > 0) && (
+              <div className="absolute left-4 top-16 flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1 font-semibold text-white">
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 2" />
+                </svg>
+                <span className={countdown > 0 ? 'text-base tabular-nums' : 'text-sm'}>
+                  {countdown > 0 ? countdown : `${timer}s`}
+                </span>
               </div>
             )}
 
@@ -317,10 +347,10 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
             Cancel
           </button>
           <button
-            onClick={shoot}
-            disabled={!!error || countdown > 0}
+            onClick={countdown > 0 ? cancelCountdown : shoot}
+            disabled={!!error}
             className="h-16 w-16 rounded-full border-4 border-white bg-white/20 disabled:opacity-40"
-            aria-label="Capture photo"
+            aria-label={countdown > 0 ? 'Cancel timer' : 'Capture photo'}
           />
           <span className="w-16" />
         </div>
