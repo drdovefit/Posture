@@ -32,7 +32,6 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
   const [showGuide, setShowGuide] = useState(false);
   const [lowLight, setLowLight] = useState(false);
   const [frameTip, setFrameTip] = useState<string | null>(null);
-  const [fitMode, setFitMode] = useState<'cover' | 'contain'>('cover');
 
   const viewLabel = view === 'lateral' ? 'Side view' : 'Front view';
   const guideTips =
@@ -60,6 +59,19 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
       };
       const stream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
       streamRef.current = stream;
+      // Widen to the sensor's minimum zoom (least zoomed-in) where the device
+      // exposes zoom control, to counter the fill-crop looking zoomed in.
+      try {
+        const track = stream.getVideoTracks()[0];
+        const caps = (track?.getCapabilities?.() ?? {}) as { zoom?: { min?: number } };
+        if (track && caps.zoom && typeof caps.zoom.min === 'number') {
+          await track.applyConstraints({
+            advanced: [{ zoom: caps.zoom.min }],
+          } as MediaTrackConstraints);
+        }
+      } catch {
+        /* zoom not controllable on this device */
+      }
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play().catch(() => {});
@@ -124,24 +136,21 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
   }, [error, view]);
 
   function grabFrame(el: HTMLVideoElement, maxW = 1400): Promise<Blob> {
-    // Capture matches the preview: when filling the screen (cover) we grab the
-    // same centered crop; when zoom is reset (contain) we grab the full frame.
+    // Capture the same centered crop the screen shows (object-cover).
     const vw = el.videoWidth || 1080;
     const vh = el.videoHeight || 1920;
+    const boxAspect = (el.clientWidth || vw) / (el.clientHeight || vh);
+    const srcAspect = vw / vh;
     let sx = 0;
     let sy = 0;
     let sw = vw;
     let sh = vh;
-    if (fitMode === 'cover') {
-      const boxAspect = (el.clientWidth || vw) / (el.clientHeight || vh);
-      const srcAspect = vw / vh;
-      if (srcAspect > boxAspect) {
-        sw = Math.round(vh * boxAspect);
-        sx = Math.round((vw - sw) / 2);
-      } else {
-        sh = Math.round(vw / boxAspect);
-        sy = Math.round((vh - sh) / 2);
-      }
+    if (srcAspect > boxAspect) {
+      sw = Math.round(vh * boxAspect);
+      sx = Math.round((vw - sw) / 2);
+    } else {
+      sh = Math.round(vw / boxAspect);
+      sy = Math.round((vh - sh) / 2);
     }
     const scale = Math.min(1, maxW / sw);
     const canvas = document.createElement('canvas');
@@ -190,7 +199,7 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
               ref={videoRef}
               playsInline
               muted
-              className={`h-full w-full ${fitMode === 'cover' ? 'object-cover' : 'object-contain'}`}
+              className="h-full w-full object-cover"
               style={{ transform: previewTransform, transformOrigin: 'center' }}
             />
 
@@ -232,13 +241,6 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
               title="Flip camera"
             >
               ⟲
-            </button>
-
-            <button
-              onClick={() => setFitMode((m) => (m === 'cover' ? 'contain' : 'cover'))}
-              className="absolute bottom-4 left-4 rounded-full bg-black/60 px-3 py-1.5 text-xs font-medium text-white"
-            >
-              {fitMode === 'cover' ? 'Reset zoom' : 'Fill screen'}
             </button>
 
             <div className="pointer-events-none absolute inset-x-0 bottom-4 text-center">
