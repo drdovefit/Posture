@@ -364,7 +364,7 @@ export default function AnalyzePage() {
                 view={view}
                 landmarks={shot.landmarks}
                 metrics={result.metrics}
-                onChange={(lm) => patchShot(view, { landmarks: lm, detected: true })}
+                onChange={(lm) => patchShot(view, { landmarks: lm, detected: true, detectMsg: '' })}
               />
               <div className="space-y-2">
                 {shot.detectMsg && (
