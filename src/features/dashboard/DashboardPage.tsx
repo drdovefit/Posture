@@ -73,6 +73,12 @@ export default function DashboardPage() {
       ? Math.round(assessments.reduce((s, a) => s + a.score, 0) / assessments.length)
       : 0;
   const best = assessments && assessments.length ? Math.max(...assessments.map((a) => a.score)) : 0;
+  const bestA =
+    assessments && assessments.length
+      ? assessments.reduce((m, a) => (a.score > m.score ? a : m), assessments[0])
+      : undefined;
+  const fmtDate = (t: number) =>
+    new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
   return (
     <div className="space-y-6">
@@ -127,20 +133,29 @@ export default function DashboardPage() {
         <>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="card flex items-center gap-4 p-5">
-              <ScoreRing score={latest?.score ?? 0} size={96} label="Latest" />
-              <div className="text-sm text-slate-500">
-                {latest && new Date(latest.createdAt).toLocaleDateString()} ·{' '}
-                {latest && VIEW_LABEL[latest.view]} view
+              <ScoreRing score={latest?.score ?? 0} size={76} label="" />
+              <div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl font-bold">Latest</span>
+                  {latest && (
+                    <span className="text-sm text-slate-500">{VIEW_LABEL[latest.view]} view</span>
+                  )}
+                </div>
+                {latest && (
+                  <div className="text-sm text-slate-500">{fmtDate(latest.createdAt)}</div>
+                )}
               </div>
             </div>
             <div className="card flex flex-col justify-center p-5">
               <div className="text-3xl font-bold">{avg}</div>
-              <div className="text-sm text-slate-500">Average score</div>
+              <div className="text-sm text-slate-500">
+                Average score · {assessments.length} total
+              </div>
             </div>
             <div className="card flex flex-col justify-center p-5">
               <div className="text-3xl font-bold">{best}</div>
               <div className="text-sm text-slate-500">
-                Best score · {assessments.length} total
+                Best score{bestA && ` · ${fmtDate(bestA.createdAt)}`}
               </div>
             </div>
           </div>

@@ -1,6 +1,24 @@
 import { jsPDF } from 'jspdf';
 import type { Assessment, Client, Metric } from '../types';
 import { BRAND_IMAGE_KEYS, storedBrandImage } from '../brandImages';
+import { renderAnnotated } from './renderAnnotated';
+
+/** Decode a blob into an image element for re-rendering. */
+function blobToImage(blob: Blob): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('image decode failed'));
+    };
+    img.src = url;
+  });
+}
 
 const SEV_LABEL: Record<string, string> = {
   good: 'Good',
@@ -43,25 +61,26 @@ export async function exportAssessmentPdf(client: Client, a: Assessment) {
 
   // Header (blue bar). The QR sits in the top-right on a white tile.
   const qrData = await loadQrDataUrl();
+  const headerH = 92;
   doc.setFillColor(14, 165, 233);
-  doc.rect(0, 0, pageW, 70, 'F');
+  doc.rect(0, 0, pageW, headerH, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(22);
-  doc.text('PostureLab Report', margin, 44);
+  doc.text('PostureLab Report', margin, 52);
   if (qrData) {
-    const qrSize = 50;
+    const qrSize = 70;
     const qx = pageW - margin - qrSize;
-    const qy = (70 - qrSize) / 2;
+    const qy = (headerH - qrSize) / 2;
     doc.setFillColor(255, 255, 255);
-    doc.roundedRect(qx - 4, qy - 4, qrSize + 8, qrSize + 8, 4, 4, 'F');
+    doc.roundedRect(qx - 5, qy - 5, qrSize + 10, qrSize + 10, 5, 5, 'F');
     try {
       doc.addImage(qrData, 'PNG', qx, qy, qrSize, qrSize, undefined, 'FAST');
     } catch {
       /* QR format unsupported; skip */
     }
   }
-  yPos = 96;
+  yPos = headerH + 24;
 
   doc.setTextColor(30, 41, 59);
   doc.setFont('helvetica', 'normal');
@@ -79,8 +98,18 @@ export async function exportAssessmentPdf(client: Client, a: Assessment) {
 
   // Annotated image on the left; score and measurements stacked in the right
   // column so the space beside the image isn't wasted.
-  const imgBlob = a.annotated ?? a.photo;
-  const dataUrl = await blobToDataUrl(imgBlob);
+  // Re-render the report image from the original photo so it always carries the
+  // current minimal watermark (small wordmark, no QR), even for older saves.
+  let dataUrl: string;
+  try {
+    const img = await blobToImage(a.photo);
+    const rendered = await renderAnnotated(img, a.view, a.landmarks, a.metrics, 900, {
+      watermark: 'minimal',
+    });
+    dataUrl = await blobToDataUrl(rendered);
+  } catch {
+    dataUrl = await blobToDataUrl(a.annotated ?? a.photo);
+  }
   const imgW = 200;
   const ratio = a.imageHeight / a.imageWidth || 1.4;
   const imgH = Math.min(imgW * ratio, 360);
