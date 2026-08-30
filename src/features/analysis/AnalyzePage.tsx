@@ -44,6 +44,8 @@ interface Shot {
   landmarks: Landmarks;
   detectMsg: string;
   warnings?: string[];
+  /** False when detection found no body (score is meaningless until adjusted). */
+  detected: boolean;
   savedId?: number;
 }
 
@@ -88,7 +90,7 @@ export default function AnalyzePage() {
       if (old?.url) URL.revokeObjectURL(old.url);
       return {
         ...prev,
-        [forView]: { url, blob, imgEl: img, landmarks: {}, detectMsg: 'Detecting posture…' },
+        [forView]: { url, blob, imgEl: img, landmarks: {}, detectMsg: 'Detecting posture…', detected: true },
       };
     });
     if (!dotGuideHidden()) setShowDotGuide(true);
@@ -99,6 +101,7 @@ export default function AnalyzePage() {
       const landmarks = raw ? mapLandmarks(raw, forView) : defaultLandmarks(forView);
       patchShot(forView, {
         landmarks,
+        detected: !!raw,
         detectMsg: raw
           ? 'Drag any point to fine-tune.'
           : 'No body found. Drag the points onto your joints.',
@@ -166,6 +169,7 @@ export default function AnalyzePage() {
       const landmarks = raw ? mapLandmarks(raw, view) : defaultLandmarks(view);
       patchShot(view, {
         landmarks,
+        detected: !!raw,
         detectMsg: raw ? 'Points updated.' : 'No body found.',
         warnings: raw
           ? photoWarnings(s.imgEl, landmarks, view, {
@@ -360,7 +364,7 @@ export default function AnalyzePage() {
                 view={view}
                 landmarks={shot.landmarks}
                 metrics={result.metrics}
-                onChange={(lm) => patchShot(view, { landmarks: lm })}
+                onChange={(lm) => patchShot(view, { landmarks: lm, detected: true })}
               />
               <div className="space-y-2">
                 {shot.detectMsg && (
@@ -390,11 +394,45 @@ export default function AnalyzePage() {
 
             <div className="space-y-4">
               <div className="card flex items-center gap-4 p-4">
-                <ScoreRing score={result.score} size={96} />
-                <div className="text-sm">
-                  <div className="font-semibold">{scoreFeedback(result.score).title}</div>
-                  <p className="mt-0.5 text-slate-500">{scoreFeedback(result.score).detail}</p>
-                </div>
+                {shot.detected === false ? (
+                  <>
+                    <ScoreRing
+                      score={0}
+                      size={96}
+                      label=""
+                      centerContent={
+                        <button
+                          onClick={reDetect}
+                          disabled={detecting}
+                          className="grid h-16 w-16 place-items-center rounded-full bg-brand-500 text-sm font-semibold text-white disabled:opacity-60"
+                        >
+                          {detecting ? '…' : 'Detect'}
+                        </button>
+                      }
+                    />
+                    <div className="text-sm">
+                      <div className="font-semibold">No body detected</div>
+                      <p className="mt-0.5 text-slate-500">
+                        Drag the points onto your joints, or tap Detect to try again. See the{' '}
+                        <button
+                          className="text-brand-600 hover:underline"
+                          onClick={() => setShowDotGuide(true)}
+                        >
+                          dot guide
+                        </button>{' '}
+                        for help.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <ScoreRing score={result.score} size={96} />
+                    <div className="text-sm">
+                      <div className="font-semibold">{scoreFeedback(result.score).title}</div>
+                      <p className="mt-0.5 text-slate-500">{scoreFeedback(result.score).detail}</p>
+                    </div>
+                  </>
+                )}
               </div>
               <div className="card p-4">
                 <h2 className="mb-1 font-semibold">Measurements</h2>

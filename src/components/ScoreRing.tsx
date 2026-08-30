@@ -1,7 +1,11 @@
+import type { ReactNode } from 'react';
+
 interface Props {
   score: number;
   size?: number;
   label?: string;
+  /** Render this in the center instead of the score number (e.g. a button). */
+  centerContent?: ReactNode;
 }
 
 function color(score: number) {
@@ -15,7 +19,7 @@ function color(score: number) {
  * rendered as plain HTML centered over it — this avoids SVG <text> transform
  * quirks so the number always shows (including on iOS Safari).
  */
-export default function ScoreRing({ score, size = 128, label = 'Posture score' }: Props) {
+export default function ScoreRing({ score, size = 128, label = 'Posture score', centerContent }: Props) {
   const stroke = size * 0.09;
   const r = (size - stroke) / 2;
   const cx = size / 2;
@@ -49,12 +53,16 @@ export default function ScoreRing({ score, size = 128, label = 'Posture score' }
             />
           </g>
         </svg>
-        <div
-          className="absolute inset-0 flex items-center justify-center font-bold tabular-nums text-slate-800 dark:text-slate-100"
-          style={{ fontSize: size * 0.3 }}
-        >
-          {score}
-        </div>
+        {centerContent ? (
+          <div className="absolute inset-0 flex items-center justify-center">{centerContent}</div>
+        ) : (
+          <div
+            className="absolute inset-0 flex items-center justify-center font-bold tabular-nums text-slate-800 dark:text-slate-100"
+            style={{ fontSize: size * 0.3 }}
+          >
+            {score}
+          </div>
+        )}
       </div>
       {label && <span className="mt-1 text-xs font-medium text-slate-500">{label}</span>}
     </div>
