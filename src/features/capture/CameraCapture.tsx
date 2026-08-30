@@ -73,16 +73,36 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
   }, [facing]);
 
   function grabFrame(el: HTMLVideoElement, maxW = 1400): Promise<Blob> {
-    const scale = Math.min(1, maxW / (el.videoWidth || maxW));
+    const vw = el.videoWidth || 1080;
+    const vh = el.videoHeight || 1920;
+    // The preview fills the screen with object-cover, so it shows a centered
+    // crop of the (usually landscape) camera frame. Capture that same crop so
+    // the saved photo matches exactly what was framed on screen.
+    const boxW = el.clientWidth || vw;
+    const boxH = el.clientHeight || vh;
+    const boxAspect = boxW / boxH;
+    const srcAspect = vw / vh;
+    let sx = 0;
+    let sy = 0;
+    let sw = vw;
+    let sh = vh;
+    if (srcAspect > boxAspect) {
+      sw = Math.round(vh * boxAspect);
+      sx = Math.round((vw - sw) / 2);
+    } else {
+      sh = Math.round(vw / boxAspect);
+      sy = Math.round((vh - sh) / 2);
+    }
+    const scale = Math.min(1, maxW / sw);
     const canvas = document.createElement('canvas');
-    canvas.width = Math.round((el.videoWidth || maxW) * scale);
-    canvas.height = Math.round((el.videoHeight || maxW) * scale);
+    canvas.width = Math.round(sw * scale);
+    canvas.height = Math.round(sh * scale);
     const ctx = canvas.getContext('2d')!;
     if (facing === 'user') {
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
     }
-    ctx.drawImage(el, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(el, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
     return new Promise((res) => canvas.toBlob((b) => res(b!), 'image/jpeg', 0.9));
   }
 
@@ -120,7 +140,7 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
               ref={videoRef}
               playsInline
               muted
-              className="h-full w-full object-contain"
+              className="h-full w-full object-cover"
               style={{ transform: previewTransform, transformOrigin: 'center' }}
             />
 
