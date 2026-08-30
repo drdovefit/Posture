@@ -88,36 +88,19 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
   }, [error]);
 
   function grabFrame(el: HTMLVideoElement, maxW = 1400): Promise<Blob> {
-    const vw = el.videoWidth || 1080;
-    const vh = el.videoHeight || 1920;
-    // The preview fills the screen with object-cover, so it shows a centered
-    // crop of the (usually landscape) camera frame. Capture that same crop so
-    // the saved photo matches exactly what was framed on screen.
-    const boxW = el.clientWidth || vw;
-    const boxH = el.clientHeight || vh;
-    const boxAspect = boxW / boxH;
-    const srcAspect = vw / vh;
-    let sx = 0;
-    let sy = 0;
-    let sw = vw;
-    let sh = vh;
-    if (srcAspect > boxAspect) {
-      sw = Math.round(vh * boxAspect);
-      sx = Math.round((vw - sw) / 2);
-    } else {
-      sh = Math.round(vw / boxAspect);
-      sy = Math.round((vh - sh) / 2);
-    }
-    const scale = Math.min(1, maxW / sw);
+    // Capture the full camera frame (no crop), matching the zoomed-out preview.
+    const vw = el.videoWidth || maxW;
+    const vh = el.videoHeight || maxW;
+    const scale = Math.min(1, maxW / vw);
     const canvas = document.createElement('canvas');
-    canvas.width = Math.round(sw * scale);
-    canvas.height = Math.round(sh * scale);
+    canvas.width = Math.round(vw * scale);
+    canvas.height = Math.round(vh * scale);
     const ctx = canvas.getContext('2d')!;
     if (facing === 'user') {
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
     }
-    ctx.drawImage(el, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(el, 0, 0, canvas.width, canvas.height);
     return new Promise((res) => canvas.toBlob((b) => res(b!), 'image/jpeg', 0.9));
   }
 
@@ -155,7 +138,7 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
               ref={videoRef}
               playsInline
               muted
-              className="h-full w-full object-cover"
+              className="h-full w-full object-contain"
               style={{ transform: previewTransform, transformOrigin: 'center' }}
             />
 
