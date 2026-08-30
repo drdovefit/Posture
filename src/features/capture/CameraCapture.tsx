@@ -142,32 +142,19 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
   }, []);
 
   function grabFrame(el: HTMLVideoElement, maxW = 1400): Promise<Blob> {
-    // Capture the same centered crop the screen shows (object-cover).
+    // True view: capture the full camera frame, matching the un-cropped preview.
     const vw = el.videoWidth || 1080;
     const vh = el.videoHeight || 1920;
-    const boxAspect = (el.clientWidth || vw) / (el.clientHeight || vh);
-    const srcAspect = vw / vh;
-    let sx = 0;
-    let sy = 0;
-    let sw = vw;
-    let sh = vh;
-    if (srcAspect > boxAspect) {
-      sw = Math.round(vh * boxAspect);
-      sx = Math.round((vw - sw) / 2);
-    } else {
-      sh = Math.round(vw / boxAspect);
-      sy = Math.round((vh - sh) / 2);
-    }
-    const scale = Math.min(1, maxW / sw);
+    const scale = Math.min(1, maxW / vw);
     const canvas = document.createElement('canvas');
-    canvas.width = Math.round(sw * scale);
-    canvas.height = Math.round(sh * scale);
+    canvas.width = Math.round(vw * scale);
+    canvas.height = Math.round(vh * scale);
     const ctx = canvas.getContext('2d')!;
     if (facing === 'user') {
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
     }
-    ctx.drawImage(el, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(el, 0, 0, canvas.width, canvas.height);
     return new Promise((res) => canvas.toBlob((b) => res(b!), 'image/jpeg', 0.9));
   }
 
@@ -205,17 +192,13 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
           </div>
         ) : (
           <>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="relative aspect-[3/4] max-h-full max-w-full overflow-hidden">
-                <video
-                  ref={videoRef}
-                  playsInline
-                  muted
-                  className="h-full w-full object-cover"
-                  style={{ transform: previewTransform, transformOrigin: 'center' }}
-                />
-              </div>
-            </div>
+            <video
+              ref={videoRef}
+              playsInline
+              muted
+              className="h-full w-full object-contain"
+              style={{ transform: previewTransform, transformOrigin: 'center' }}
+            />
 
             {/* Vertical guide line. */}
             <div className="pointer-events-none absolute inset-0">
