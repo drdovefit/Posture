@@ -95,9 +95,11 @@ export default function DashboardPage() {
       )}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>{firstName && <h1 className="text-2xl font-bold">Hi {firstName}</h1>}</div>
-        <Link to="/analyze" className="btn-primary">
-          ＋ New analysis
-        </Link>
+        {assessments.length > 0 && (
+          <Link to="/analyze" className="btn-primary">
+            ＋ New analysis
+          </Link>
+        )}
       </div>
 
       {!assessments?.length ? (
