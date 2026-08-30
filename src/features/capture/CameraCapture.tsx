@@ -67,7 +67,7 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
         if (track && caps.zoom && typeof caps.zoom.min === 'number') {
           await track.applyConstraints({
             advanced: [{ zoom: caps.zoom.min }],
-          } as MediaTrackConstraints);
+          } as unknown as MediaTrackConstraints);
         }
       } catch {
         /* zoom not controllable on this device */
