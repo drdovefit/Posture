@@ -1,10 +1,8 @@
-import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../lib/db';
 import { useActiveClient } from '../../state/useClient';
 import { useAuth } from '../../state/auth';
-import { pickGreeting } from '../../lib/greetings';
 import ScoreRing from '../../components/ScoreRing';
 import { useCroppedPortrait } from '../../state/useCroppedPortrait';
 import { analyze } from '../../lib/measure';
@@ -43,7 +41,6 @@ export default function DashboardPage() {
   const { activeId } = useActiveClient();
   const { user } = useAuth();
   const firstName = user?.displayName?.trim().split(/\s+/)[0];
-  const greeting = useMemo(() => pickGreeting(firstName), [firstName]);
   const assessments = useLiveQuery(
     () =>
       activeId == null
@@ -66,7 +63,6 @@ export default function DashboardPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">{firstName ? `Hi ${firstName}` : 'Hey there'}</h1>
-          <p className="text-sm text-slate-500">{greeting}</p>
         </div>
         <Link to="/analyze" className="btn-primary">
           ＋ New analysis
