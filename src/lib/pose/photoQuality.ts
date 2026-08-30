@@ -36,6 +36,29 @@ export function imageBrightness(img: CanvasImageSource, w = 40, h = 40): number 
 }
 
 /**
+ * A single brief framing hint for the live camera (or null if the framing is
+ * fine). Short wording, since it shows as a small on-camera bubble.
+ */
+export function framingHint(
+  lm: Landmarks,
+  view: ViewType,
+  shoulderSep?: number,
+): string | null {
+  const { top, bottom } = bodyTopBottom(lm, view);
+  const span = top != null && bottom != null ? bottom - top : undefined;
+  if (bottom == null) return 'Fit your whole body in';
+  if (bottom > 0.98) return 'Step back a little';
+  if (top != null && top < 0.03) return 'Fit your head in';
+  if (span != null && span < 0.45) return 'Move closer';
+  if (shoulderSep != null && span != null && span >= 0.45) {
+    const sepRatio = shoulderSep / Math.max(span, 1e-6);
+    if (view === 'lateral' && sepRatio > 0.14) return 'Turn side-on';
+    if (view !== 'lateral' && sepRatio < 0.06) return 'Face the camera';
+  }
+  return null;
+}
+
+/**
  * Non-blocking quality checks on a just-added photo. Bad photos are still
  * allowed; these just warn that the reading may be less accurate. Returns a
  * list of plain-language warnings (empty when the photo looks fine).

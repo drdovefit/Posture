@@ -68,12 +68,12 @@ export interface RawLandmark {
   visibility: number;
 }
 
-/** Detect pose landmarks on an already-decoded image element. */
-export async function detectPose(
-  image: HTMLImageElement,
+/** Detect pose landmarks on any image-like source (image, video, or canvas). */
+export async function detectPoseSource(
+  src: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement,
 ): Promise<RawLandmark[] | null> {
   const landmarker = await getPoseLandmarker();
-  const result = landmarker.detect(image);
+  const result = landmarker.detect(src as HTMLImageElement);
   const first = result.landmarks?.[0];
   if (!first) return null;
   return first.map((p) => ({
@@ -82,4 +82,11 @@ export async function detectPose(
     z: p.z ?? 0,
     visibility: p.visibility ?? 0,
   }));
+}
+
+/** Detect pose landmarks on an already-decoded image element. */
+export async function detectPose(
+  image: HTMLImageElement,
+): Promise<RawLandmark[] | null> {
+  return detectPoseSource(image);
 }

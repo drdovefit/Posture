@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ViewType } from '../../lib/types';
-import { imageBrightness } from '../../lib/pose/photoQuality';
+import { imageBrightness, framingHint } from '../../lib/pose/photoQuality';
+import { detectPoseSource } from '../../lib/pose/landmarker';
+import { mapLandmarks } from '../../lib/pose/mapping';
 
 interface Props {
   view: ViewType;
@@ -29,6 +31,7 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
   const [countdown, setCountdown] = useState(0);
   const [showGuide, setShowGuide] = useState(false);
   const [lowLight, setLowLight] = useState(false);
+  const [frameTip, setFrameTip] = useState<string | null>(null);
 
   const viewLabel = view === 'lateral' ? 'Side view' : 'Front view';
   const guideTips =
@@ -53,6 +56,7 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
         facingMode: f,
         width: { ideal: 1080 },
         height: { ideal: 1920 },
+        aspectRatio: { ideal: 9 / 16 },
       };
       const stream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
       streamRef.current = stream;
@@ -87,20 +91,66 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
     return () => clearInterval(iv);
   }, [error]);
 
+  // Live framing check: run pose detection on the preview about once a second
+  // and show a brief hint (move closer, step back, turn side-on, and so on).
+  useEffect(() => {
+    if (error) return;
+    let cancelled = false;
+    let busy = false;
+    const iv = setInterval(async () => {
+      const el = videoRef.current;
+      if (!el || el.videoWidth === 0 || busy) return;
+      busy = true;
+      try {
+        const raw = await detectPoseSource(el);
+        if (cancelled) return;
+        if (!raw) {
+          setFrameTip(null);
+          return;
+        }
+        const lm = mapLandmarks(raw, view);
+        const sep = raw[11] && raw[12] ? Math.abs(raw[11].x - raw[12].x) : undefined;
+        setFrameTip(framingHint(lm, view, sep));
+      } catch {
+        /* detector not ready; ignore this tick */
+      } finally {
+        busy = false;
+      }
+    }, 1200);
+    return () => {
+      cancelled = true;
+      clearInterval(iv);
+    };
+  }, [error, view]);
+
   function grabFrame(el: HTMLVideoElement, maxW = 1400): Promise<Blob> {
-    // Capture the full camera frame (no crop), matching the zoomed-out preview.
-    const vw = el.videoWidth || maxW;
-    const vh = el.videoHeight || maxW;
-    const scale = Math.min(1, maxW / vw);
+    // The preview fills the screen (object-cover), showing a centered crop of
+    // the camera frame. Capture that same crop so the photo matches the preview.
+    const vw = el.videoWidth || 1080;
+    const vh = el.videoHeight || 1920;
+    const boxAspect = (el.clientWidth || vw) / (el.clientHeight || vh);
+    const srcAspect = vw / vh;
+    let sx = 0;
+    let sy = 0;
+    let sw = vw;
+    let sh = vh;
+    if (srcAspect > boxAspect) {
+      sw = Math.round(vh * boxAspect);
+      sx = Math.round((vw - sw) / 2);
+    } else {
+      sh = Math.round(vw / boxAspect);
+      sy = Math.round((vh - sh) / 2);
+    }
+    const scale = Math.min(1, maxW / sw);
     const canvas = document.createElement('canvas');
-    canvas.width = Math.round(vw * scale);
-    canvas.height = Math.round(vh * scale);
+    canvas.width = Math.round(sw * scale);
+    canvas.height = Math.round(sh * scale);
     const ctx = canvas.getContext('2d')!;
     if (facing === 'user') {
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
     }
-    ctx.drawImage(el, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(el, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
     return new Promise((res) => canvas.toBlob((b) => res(b!), 'image/jpeg', 0.9));
   }
 
@@ -138,7 +188,7 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
               ref={videoRef}
               playsInline
               muted
-              className="h-full w-full object-contain"
+              className="h-full w-full object-cover"
               style={{ transform: previewTransform, transformOrigin: 'center' }}
             />
 
@@ -190,11 +240,18 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
               </span>
             </div>
 
-            {lowLight && (
-              <div className="pointer-events-none absolute left-1/2 top-20 -translate-x-1/2">
-                <div className="flex items-center gap-1.5 rounded-full bg-amber-400/45 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
-                  <span aria-hidden>🔅</span> Low light
-                </div>
+            {(lowLight || frameTip) && (
+              <div className="pointer-events-none absolute left-1/2 top-20 flex -translate-x-1/2 flex-col items-center gap-1.5">
+                {lowLight && (
+                  <div className="flex items-center gap-1.5 rounded-full bg-amber-400/45 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                    <span aria-hidden>🔅</span> Low light
+                  </div>
+                )}
+                {frameTip && (
+                  <div className="rounded-full bg-black/45 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                    {frameTip}
+                  </div>
+                )}
               </div>
             )}
 
