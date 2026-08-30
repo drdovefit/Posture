@@ -41,6 +41,12 @@ const BANDS: Band[] = [
 
 export function scoreFeedback(score: number): { title: string; detail: string } {
   const s = Math.round(score);
+  if (s <= 0) {
+    return {
+      title: 'No score yet',
+      detail: 'Line the points up on your joints to get a reading.',
+    };
+  }
   const band = BANDS.find((b) => s >= b.min) ?? BANDS[BANDS.length - 1];
   return { title: band.title, detail: band.detail };
 }
