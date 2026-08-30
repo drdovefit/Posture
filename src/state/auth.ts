@@ -63,7 +63,7 @@ export function authErrorMessage(err: unknown): string {
     case 'auth/weak-password':
       return 'Use a password of at least 6 characters.';
     case 'auth/email-already-in-use':
-      return 'That email already has an account — try signing in instead.';
+      return 'That email already has an account. Try signing in instead.';
     case 'auth/invalid-credential':
     case 'auth/wrong-password':
     case 'auth/user-not-found':
@@ -74,13 +74,13 @@ export function authErrorMessage(err: unknown): string {
       return 'Google sign-in isn’t turned on for this project yet (Firebase → Authentication → Sign-in method).';
     case 'auth/popup-blocked':
     case 'auth/cancelled-popup-request':
-      return 'Your browser blocked the sign-in popup — allow popups for this site and try again.';
+      return 'Your browser blocked the sign-in popup. Allow popups for this site and try again.';
     case 'auth/popup-closed-by-user':
       return 'The Google window was closed before sign-in finished.';
     case 'auth/too-many-requests':
-      return 'Too many attempts. This account is temporarily paused — wait a bit or reset your password.';
+      return 'Too many attempts. This account is temporarily paused. Wait a bit or reset your password.';
     case 'auth/network-request-failed':
-      return 'Network problem — check your connection and try again.';
+      return 'Network problem. Check your connection and try again.';
     default:
       return 'Sign-in failed. Please try again.';
   }

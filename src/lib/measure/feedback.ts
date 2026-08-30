@@ -1,38 +1,64 @@
 import type { Metric } from '../types';
 
-/**
- * Turn a 0–100 posture score into a specific, graded message. The bands are
- * fine (roughly every 5 points) and each carries its own wording, so a 96 reads
- * differently from a 90, and a 62 differently from a 55.
- */
-export function scoreFeedback(score: number): { title: string; detail: string } {
-  const s = Math.round(score);
-  if (s >= 97) return { title: 'Near-perfect alignment', detail: 'Your joints stack almost exactly on the plumb line. This is textbook posture — keep doing what you’re doing.' };
-  if (s >= 93) return { title: 'Excellent posture', detail: 'Very well aligned with only the tiniest deviations. Small maintenance work keeps you here.' };
-  if (s >= 88) return { title: 'Great posture', detail: 'Strong overall alignment with one or two minor areas to polish. You’re ahead of most people.' };
-  if (s >= 83) return { title: 'Good posture', detail: 'Solid alignment with a couple of mild deviations worth a little attention.' };
-  if (s >= 77) return { title: 'Above average', detail: 'Mostly balanced, but a few areas are starting to drift — a good time to correct them.' };
-  if (s >= 70) return { title: 'Fair posture', detail: 'A mix of good and mild-to-moderate areas. Targeted work will move the needle quickly.' };
-  if (s >= 62) return { title: 'Needs attention', detail: 'Several areas are pulling you off the plumb line. Focus on the flagged items below.' };
-  if (s >= 52) return { title: 'Noticeable imbalance', detail: 'Multiple moderate deviations are stacking up. Prioritise the two lowest-scoring areas first.' };
-  if (s >= 40) return { title: 'Significant imbalance', detail: 'Posture is meaningfully off in several places. Steady daily work will show clear progress.' };
-  return { title: 'Major imbalance', detail: 'Large deviations across the board. Start with one area at a time and re-check weekly.' };
+interface Band {
+  min: number;
+  title: string;
+  detail: string;
 }
 
 /**
- * A short, value-aware phrase for one metric — combines how far off it is with
- * a specific descriptor so 4.2° reads differently from 12°.
+ * Turn a 0..100 posture score into a specific, graded message. There are ~25
+ * bands so a 96 reads differently from a 90, and a 62 differently from a 55.
+ * Plain wording, no jargon.
+ */
+const BANDS: Band[] = [
+  { min: 97, title: 'Practically perfect', detail: 'Your joints stack almost dead straight. Whatever you are doing, keep doing it.' },
+  { min: 94, title: 'Outstanding', detail: 'Extremely well stacked, with only the tiniest deviations left.' },
+  { min: 91, title: 'Excellent', detail: 'Very strong posture with barely anything to change.' },
+  { min: 88, title: 'Really strong', detail: 'Great overall, with just one or two small things to polish.' },
+  { min: 85, title: 'Great', detail: 'Solid posture that sits ahead of most people.' },
+  { min: 82, title: 'Very good', detail: 'Well balanced, with a couple of mild things to keep an eye on.' },
+  { min: 79, title: 'Good', detail: 'Mostly stacked, with a few small drifts to tidy up.' },
+  { min: 76, title: 'Pretty good', detail: 'Above average, with a little room to clean up.' },
+  { min: 73, title: 'Decent', detail: 'A fair base, with a handful of mild areas to work on.' },
+  { min: 70, title: 'Fair', detail: 'A mix of good and mildly off areas. A little work goes a long way.' },
+  { min: 67, title: 'Okay', detail: 'Some areas are holding well, others are starting to drift.' },
+  { min: 64, title: 'Getting there', detail: 'A few things are pulling you off. Pick one to start with.' },
+  { min: 61, title: 'Needs some work', detail: 'Several mild to moderate areas are adding up.' },
+  { min: 58, title: 'Needs work', detail: 'A number of areas are off. Steady effort will show quickly.' },
+  { min: 55, title: 'Off in places', detail: 'Multiple moderate areas. Focus on the two lowest first.' },
+  { min: 52, title: 'Noticeably off', detail: 'Deviations are stacking up in a few spots.' },
+  { min: 49, title: 'Quite off', detail: 'Posture is off in several places. Take it one area at a time.' },
+  { min: 46, title: 'Well off', detail: 'A lot is drifting. Start small and re-check often.' },
+  { min: 43, title: 'Significantly off', detail: 'Meaningful deviations across the body.' },
+  { min: 40, title: 'Very off', detail: 'Posture is off in many places. Daily work will move it.' },
+  { min: 36, title: 'Major imbalance', detail: 'Large deviations across the board.' },
+  { min: 32, title: 'Heavily off', detail: 'Most areas need attention. Work through them one at a time.' },
+  { min: 28, title: 'Very heavily off', detail: 'Broad, large deviations. Small steady steps add up.' },
+  { min: 20, title: 'Severe imbalance', detail: 'Posture is far off across the body.' },
+  { min: 0, title: 'Rebuild from here', detail: 'A lot to work on. Start with one area and track it each week.' },
+];
+
+export function scoreFeedback(score: number): { title: string; detail: string } {
+  const s = Math.round(score);
+  const band = BANDS.find((b) => s >= b.min) ?? BANDS[BANDS.length - 1];
+  return { title: band.title, detail: band.detail };
+}
+
+/**
+ * A short, value-aware phrase for one metric, combining how far off it is with
+ * a plain descriptor so a small deviation reads differently from a large one.
  */
 export function metricPhrase(m: Metric): string {
   const v = Math.abs(m.value);
-  const good = m.normal.match(/0[–-]?(\d+)/);
+  const good = m.normal.match(/0[^\d]*(\d+)/);
   const goodMax = good ? Number(good[1]) : 5;
   if (m.severity === 'good') {
-    return v <= goodMax * 0.4 ? 'Excellent — right on the line.' : 'Good — within the normal range.';
+    return v <= goodMax * 0.4 ? 'Right on the line.' : 'Within the average range.';
   }
   const over = v / Math.max(goodMax, 1);
   if (m.severity === 'mild') {
-    return over < 1.5 ? 'Slightly off — easy to correct.' : 'Mildly off — worth some focus.';
+    return over < 1.5 ? 'Slightly off.' : 'Mildly off.';
   }
-  return over < 2.5 ? 'Moderately off — make this a priority.' : 'Well off — start here.';
+  return over < 2.5 ? 'Moderately off.' : 'Noticeably off.';
 }

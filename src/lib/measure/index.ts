@@ -97,11 +97,11 @@ function analyzeLateral(lm: Landmarks): { metrics: Metric[]; specs: MetricSpec[]
         band: { good: 5, mild: 12 },
         weight: 1.2,
         format: (v) => `${v.toFixed(1)}° from vertical`,
-        normal: '0–5° (ear over shoulder)',
+        normal: '0 to 5° (ear over shoulder)',
         explain: (s) =>
           s === 'good'
             ? 'Head is well stacked over the shoulders.'
-            : 'The head sits forward of the shoulders — common with screen/desk use, loading the neck extensors.',
+            : 'The head sits forward of the shoulders, common with screen and desk use, which loads the neck.',
       },
       angle,
     );
@@ -117,7 +117,7 @@ function analyzeLateral(lm: Landmarks): { metrics: Metric[]; specs: MetricSpec[]
         band: { good: 4, mild: 10 },
         weight: 1,
         format: (v) => `${v.toFixed(1)}° from vertical`,
-        normal: '0–4° (shoulder over hip)',
+        normal: '0 to 4° (shoulder over hip)',
         explain: (s) =>
           s === 'good'
             ? 'The trunk is stacked vertically over the pelvis.'
@@ -137,7 +137,7 @@ function analyzeLateral(lm: Landmarks): { metrics: Metric[]; specs: MetricSpec[]
         band: { good: 4, mild: 9 },
         weight: 1,
         format: (v) => `${v.toFixed(1)}° from vertical`,
-        normal: '0–4° (hip over ankle)',
+        normal: '0 to 4° (hip over ankle)',
         explain: (s) =>
           s === 'good'
             ? 'The pelvis is balanced over the base of support.'
@@ -162,13 +162,13 @@ function analyzeLateral(lm: Landmarks): { metrics: Metric[]; specs: MetricSpec[]
         weight: 1.2,
         format: (v) =>
           `${Math.abs(v).toFixed(1)}° ${v > 1 ? 'anterior' : v < -1 ? 'posterior' : 'neutral'}`,
-        normal: '0–6° (front & back hip roughly level)',
+        normal: '0 to 6° (front and back hip roughly level)',
         explain: (s, v) =>
           s === 'good'
             ? 'The pelvis is close to a neutral tilt.'
             : v > 0
-              ? 'Anterior pelvic tilt: the front of the pelvis drops forward and down, arching the low back — often tight hip flexors with under-active glutes and deep core.'
-              : 'Posterior pelvic tilt: the pelvis is tucked under, flattening the low back — often tight hamstrings/abs with under-active hip flexors.',
+              ? 'Anterior pelvic tilt: the front of the pelvis drops forward and down, arching the low back, often tight hip flexors with under-active glutes and deep core.'
+              : 'Posterior pelvic tilt: the pelvis is tucked under, flattening the low back, often tight hamstrings and abs with under-active hip flexors.',
       },
       tilt,
     );
@@ -184,7 +184,7 @@ function analyzeLateral(lm: Landmarks): { metrics: Metric[]; specs: MetricSpec[]
         band: { good: 6, mild: 14 },
         weight: 0.8,
         format: (v) => `${v.toFixed(1)}° off straight`,
-        normal: '0–6° (slight soft-knee)',
+        normal: '0 to 6° (slight soft knee)',
         explain: (s) =>
           s === 'good'
             ? 'Knees are close to neutral extension.'
@@ -199,16 +199,16 @@ function analyzeLateral(lm: Landmarks): { metrics: Metric[]; specs: MetricSpec[]
     push(
       {
         id: 'plumbAlign',
-        label: 'Overall Plumb Alignment',
+        label: 'Overall Stacking',
         unit: '%',
         band: { good: 6, mild: 14 },
         weight: 1,
         format: (v) => `${v.toFixed(1)}% of body height`,
-        normal: '0–6% (ear roughly over ankle)',
+        normal: '0 to 6% (ear roughly over ankle)',
         explain: (s) =>
           s === 'good'
-            ? 'Ear, and therefore the head, tracks over the base of support.'
-            : 'The head is carried well forward or behind the ankles — the whole body is off the ideal plumb line.',
+            ? 'The head tracks over the base of support.'
+            : 'The head is carried well forward or behind the ankles, so the whole body is off center.',
       },
       offsetPct,
     );
@@ -249,7 +249,7 @@ function analyzeFrontal(lm: Landmarks): { metrics: Metric[]; specs: MetricSpec[]
         band: { good: 2, mild: 5 },
         weight: 1,
         format: (v) => `${Math.abs(v).toFixed(1)}° ${v > 0 ? 'right-low' : v < 0 ? 'left-low' : 'level'}`,
-        normal: '0–2° (eyes level)',
+        normal: '0 to 2° (eyes level)',
         explain: (s) =>
           s === 'good'
             ? 'The head is level.'
@@ -269,11 +269,11 @@ function analyzeFrontal(lm: Landmarks): { metrics: Metric[]; specs: MetricSpec[]
         band: { good: 2, mild: 5 },
         weight: 1.1,
         format: (v) => `${Math.abs(v).toFixed(1)}° ${v > 0 ? 'right-low' : v < 0 ? 'left-low' : 'level'}`,
-        normal: '0–2° (shoulders even)',
+        normal: '0 to 2° (shoulders even)',
         explain: (s) =>
           s === 'good'
             ? 'Shoulders are even in height.'
-            : 'One shoulder sits higher than the other — an upper-body asymmetry to watch.',
+            : 'One shoulder sits higher than the other, an upper-body asymmetry to watch.',
       },
       tilt,
     );
@@ -289,7 +289,7 @@ function analyzeFrontal(lm: Landmarks): { metrics: Metric[]; specs: MetricSpec[]
         band: { good: 2, mild: 5 },
         weight: 1.2,
         format: (v) => `${Math.abs(v).toFixed(1)}° ${v > 0 ? 'right-low' : v < 0 ? 'left-low' : 'level'}`,
-        normal: '0–2° (hips even)',
+        normal: '0 to 2° (hips even)',
         explain: (s) =>
           s === 'good'
             ? 'The pelvis is level.'
@@ -310,7 +310,7 @@ function analyzeFrontal(lm: Landmarks): { metrics: Metric[]; specs: MetricSpec[]
         band: { good: 3, mild: 8 },
         weight: 1,
         format: (v) => `${v.toFixed(1)}% of height`,
-        normal: '0–3% (trunk centered)',
+        normal: '0 to 3% (trunk centered)',
         explain: (s) =>
           s === 'good'
             ? 'The trunk is centered over the base of support.'

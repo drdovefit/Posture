@@ -26,7 +26,7 @@ export default function MetricList({ metrics }: { metrics: Metric[] }) {
             <span className="font-medium text-slate-600 dark:text-slate-300">{metricPhrase(m)}</span>{' '}
             {m.explanation}
           </p>
-          <p className="mt-0.5 text-xs text-slate-400">Normal: {m.normal}</p>
+          <p className="mt-0.5 text-xs text-slate-400">Average: {m.normal}</p>
         </li>
       ))}
     </ul>

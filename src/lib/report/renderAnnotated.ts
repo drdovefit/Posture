@@ -25,6 +25,7 @@ export async function renderAnnotated(
   lm: Landmarks,
   metrics: Metric[],
   maxWidth = 900,
+  opts: { watermark?: 'full' | 'minimal' } = {},
 ): Promise<Blob> {
   const scale = Math.min(1, maxWidth / image.naturalWidth);
   const W = Math.round(image.naturalWidth * scale);
@@ -78,19 +79,48 @@ export async function renderAnnotated(
   });
 
   const base = import.meta.env.BASE_URL;
+  const wantQr = (opts.watermark ?? 'full') === 'full';
   const [wordmark, qr] = await Promise.all([
     loadImage(`${base}brand/wordmark.png`),
-    loadImage(storedBrandImage(BRAND_IMAGE_KEYS.qr) ?? `${base}brand/qr.png`),
+    wantQr
+      ? loadImage(storedBrandImage(BRAND_IMAGE_KEYS.qr) ?? `${base}brand/qr.png`)
+      : Promise.resolve(null),
   ]);
-
-  // Bottom-right badge: the QR and the wordmark together on one white rounded
-  // card, so the branding is always clearly visible over any photo (dark text
-  // on a dark background used to disappear). Sized generously so it reads.
-  const margin = W * 0.03;
-  const hasQr = !!(qr && qr.naturalWidth);
   const hasWm = !!(wordmark && wordmark.naturalWidth);
-  if (hasQr || hasWm) {
-    const contentW = W * 0.22; // QR + wordmark share this width
+  const hasQr = !!(qr && qr.naturalWidth);
+  const margin = W * 0.03;
+
+  const roundRect = (x: number, y: number, w: number, h: number, r: number) => {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  };
+
+  if (!wantQr) {
+    // Minimal: just a small wordmark, bottom-left, for the saved image the
+    // report uses (the QR sits in the report's blue header instead).
+    if (hasWm) {
+      const wmW = W * 0.16;
+      const wmH = (wordmark!.naturalHeight / wordmark!.naturalWidth) * wmW;
+      const pad = wmW * 0.12;
+      const x0 = margin + pad;
+      const y0 = H - margin - pad - wmH;
+      ctx.save();
+      ctx.globalAlpha = 0.82;
+      ctx.fillStyle = '#ffffff';
+      roundRect(margin, H - margin - wmH - pad * 2, wmW + pad * 2, wmH + pad * 2, wmH * 0.35);
+      ctx.fill();
+      ctx.restore();
+      ctx.drawImage(wordmark!, x0, y0, wmW, wmH);
+    }
+  } else if (hasQr || hasWm) {
+    // Full: QR + wordmark on one white rounded card, bottom-right. Compact so
+    // it labels the photo without dominating it.
+    const contentW = W * 0.15;
     const pad = contentW * 0.1;
     const gap = contentW * 0.07;
     const qrH = hasQr ? contentW : 0;
@@ -106,13 +136,7 @@ export async function renderAnnotated(
     ctx.shadowColor = 'rgba(0,0,0,0.22)';
     ctx.shadowBlur = W * 0.01;
     ctx.shadowOffsetY = W * 0.002;
-    ctx.beginPath();
-    ctx.moveTo(cardX + r, cardY);
-    ctx.arcTo(cardX + cardW, cardY, cardX + cardW, cardY + cardH, r);
-    ctx.arcTo(cardX + cardW, cardY + cardH, cardX, cardY + cardH, r);
-    ctx.arcTo(cardX, cardY + cardH, cardX, cardY, r);
-    ctx.arcTo(cardX, cardY, cardX + cardW, cardY, r);
-    ctx.closePath();
+    roundRect(cardX, cardY, cardW, cardH, r);
     ctx.fill();
     ctx.restore();
 

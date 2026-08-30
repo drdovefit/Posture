@@ -4,6 +4,7 @@ import type { Landmarks, ViewType } from '../../lib/types';
 import { analyze } from '../../lib/measure';
 import { detectPose } from '../../lib/pose/landmarker';
 import { defaultLandmarks, mapLandmarks } from '../../lib/pose/mapping';
+import { photoWarnings } from '../../lib/pose/photoQuality';
 import { renderAnnotated } from '../../lib/report/renderAnnotated';
 import { getSuggestions } from '../../lib/measure/suggestions';
 import { scoreFeedback } from '../../lib/measure/feedback';
@@ -29,6 +30,7 @@ interface Shot {
   imgEl: HTMLImageElement | null;
   landmarks: Landmarks;
   detectMsg: string;
+  warnings?: string[];
   savedId?: number;
 }
 
@@ -81,16 +83,18 @@ export default function AnalyzePage() {
     setDetecting(true);
     try {
       const raw = await detectPose(img);
+      const landmarks = raw ? mapLandmarks(raw, forView) : defaultLandmarks(forView);
       patchShot(forView, {
-        landmarks: raw ? mapLandmarks(raw, forView) : defaultLandmarks(forView),
+        landmarks,
         detectMsg: raw
-          ? 'Auto-detected — drag any point to fine-tune.'
-          : 'No body detected — drag the points onto the joints.',
+          ? 'Drag any point to fine-tune.'
+          : 'No body found. Drag the points onto your joints.',
+        warnings: photoWarnings(img, landmarks, forView),
       });
     } catch {
       patchShot(forView, {
         landmarks: defaultLandmarks(forView),
-        detectMsg: 'Auto-detection unavailable — place the points manually.',
+        detectMsg: 'Detection unavailable. Place the points by hand.',
       });
     } finally {
       setDetecting(false);
@@ -143,10 +147,10 @@ export default function AnalyzePage() {
       const raw = await detectPose(s.imgEl);
       patchShot(view, {
         landmarks: raw ? mapLandmarks(raw, view) : defaultLandmarks(view),
-        detectMsg: raw ? 'Re-detected.' : 'No body detected.',
+        detectMsg: raw ? 'Points updated.' : 'No body found.',
       });
     } catch {
-      patchShot(view, { detectMsg: 'Auto-detection unavailable.' });
+      patchShot(view, { detectMsg: 'Detection unavailable.' });
     } finally {
       setDetecting(false);
     }
@@ -169,7 +173,9 @@ export default function AnalyzePage() {
       setShowSignIn(true);
       return;
     }
-    const annotated = await renderAnnotated(s.imgEl, view, s.landmarks, result.metrics);
+    const annotated = await renderAnnotated(s.imgEl, view, s.landmarks, result.metrics, 900, {
+      watermark: 'minimal',
+    });
     const data = {
       clientId: activeId,
       view,
@@ -206,7 +212,9 @@ export default function AnalyzePage() {
   async function shareImage() {
     const s = shots[view];
     if (!s?.imgEl) return;
-    const blob = await renderAnnotated(s.imgEl, view, s.landmarks, result.metrics);
+    const blob = await renderAnnotated(s.imgEl, view, s.landmarks, result.metrics, 900, {
+      watermark: 'full',
+    });
     const file = new File([blob], annotatedFilename(), { type: 'image/png' });
     const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean };
     if (nav.canShare?.({ files: [file] })) {
@@ -222,7 +230,9 @@ export default function AnalyzePage() {
   async function downloadImage() {
     const s = shots[view];
     if (!s?.imgEl) return;
-    triggerDownload(await renderAnnotated(s.imgEl, view, s.landmarks, result.metrics));
+    triggerDownload(
+      await renderAnnotated(s.imgEl, view, s.landmarks, result.metrics, 900, { watermark: 'full' }),
+    );
   }
 
   function onDrop(e: React.DragEvent) {
@@ -270,7 +280,11 @@ export default function AnalyzePage() {
           >
             <div className="flex items-center gap-2 font-semibold">
               {v.label} view
-              {shots[v.id] && <span className="text-brand-500">●</span>}
+              {shots[v.id] && (
+                <span className="rounded-full bg-brand-500 px-1.5 text-[10px] font-semibold text-white">
+                  ✓ photo
+                </span>
+              )}
             </div>
             <div className="hidden text-xs text-slate-500 sm:block">{v.hint}</div>
           </button>
@@ -292,11 +306,11 @@ export default function AnalyzePage() {
               <h2 className="text-lg font-semibold capitalize">Add a {viewLabel} photo</h2>
               <p className="text-sm text-slate-500">
                 Full-body photo, plain background, camera at hip height, standing
-                relaxed. It’s auto-detected the moment you add it.
+                relaxed. The joint points are placed for you to fine-tune.
               </p>
               <p className="text-xs text-slate-400">
                 Tip: paste (⌘/Ctrl + V) or drag &amp; drop an image. Add a Side and a
-                Front — both are kept so you can view them together.
+                Front, and both are kept so you can view them together.
               </p>
               <div className="flex flex-wrap gap-3">
                 <button className="btn-primary" onClick={() => fileRef.current?.click()}>
@@ -323,9 +337,19 @@ export default function AnalyzePage() {
                 metrics={result.metrics}
                 onChange={(lm) => patchShot(view, { landmarks: lm })}
               />
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="text-slate-500">{shot.detectMsg}</span>
-                <div className="ml-auto flex gap-2">
+              <div className="space-y-2">
+                {shot.detectMsg && (
+                  <p className="text-sm text-slate-500">{shot.detectMsg}</p>
+                )}
+                {shot.warnings?.map((w) => (
+                  <p
+                    key={w}
+                    className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200"
+                  >
+                    {w}
+                  </p>
+                ))}
+                <div className="flex flex-wrap gap-2">
                   <button className="btn-ghost" onClick={() => setShowDotGuide(true)}>
                     ? Dot guide
                   </button>
@@ -354,21 +378,15 @@ export default function AnalyzePage() {
               <div>
                 <button className="btn-primary w-full" onClick={save} disabled={activeId == null}>
                   {shot.savedId != null
-                    ? 'Saved ✓ — Update'
+                    ? 'Saved ✓ · Update'
                     : user
                       ? 'Save assessment'
                       : 'Log in to save assessment'}
                 </button>
-                {shot.savedId != null ? (
+                {shot.savedId != null && (
                   <p className="mt-1 text-center text-xs text-slate-400">
                     Saved to your <Link to="/history" className="text-brand-600 hover:underline">history</Link>.
                   </p>
-                ) : (
-                  !user && (
-                    <p className="mt-1 text-center text-xs text-slate-400">
-                      Don't worry — you won't get any spam.
-                    </p>
-                  )
                 )}
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -410,9 +428,8 @@ export default function AnalyzePage() {
 
           {suggestions.length > 0 && (
             <div className="card p-4">
-              <div className="mb-3 flex items-baseline justify-between">
+              <div className="mb-3">
                 <h2 className="font-semibold">Suggested focus areas</h2>
-                <span className="text-xs text-slate-400">Educational only — not a treatment plan.</span>
               </div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {suggestions.map((s) => (
@@ -437,7 +454,7 @@ export default function AnalyzePage() {
       {showSignIn && (
         <SignInModal
           title="Log in to save your assessment"
-          subtitle="Don't worry — you won't get any spam. It just keeps your results synced and safe."
+          subtitle="Save this assessment to your account."
           onClose={() => setShowSignIn(false)}
           onSignedIn={() => {
             setShowSignIn(false);
@@ -449,6 +466,7 @@ export default function AnalyzePage() {
       {showCamera && (
         <CameraCapture
           view={view}
+          onViewChange={setView}
           onClose={() => setShowCamera(false)}
           onCapture={(blob) => {
             setShowCamera(false);

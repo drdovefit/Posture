@@ -34,7 +34,7 @@ function Panel({
   onToggleFlip: () => void;
 }) {
   const url = useCroppedPortrait(a, flip);
-  if (!a) return <div className="card grid aspect-[3/4] place-items-center text-slate-400">—</div>;
+  if (!a) return <div className="card grid aspect-[3/4] place-items-center text-slate-400">No scan</div>;
   return (
     <div className="card overflow-hidden">
       <div className="relative aspect-[3/4] bg-slate-100 dark:bg-slate-800">

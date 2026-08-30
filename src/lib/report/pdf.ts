@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import type { Assessment, Client, Metric } from '../types';
+import { BRAND_IMAGE_KEYS, storedBrandImage } from '../brandImages';
 
 const SEV_LABEL: Record<string, string> = {
   good: 'Good',
@@ -8,9 +9,8 @@ const SEV_LABEL: Record<string, string> = {
 };
 
 const VIEW_LABEL: Record<string, string> = {
-  anterior: 'Front (Anterior)',
-  lateral: 'Side (Lateral)',
-  posterior: 'Back (Posterior)',
+  anterior: 'Front',
+  lateral: 'Side',
 };
 
 async function blobToDataUrl(blob: Blob): Promise<string> {
@@ -21,6 +21,19 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
+/** Load the QR image as a data URL for the report header (null if missing). */
+async function loadQrDataUrl(): Promise<string | null> {
+  try {
+    const src =
+      storedBrandImage(BRAND_IMAGE_KEYS.qr) ?? `${import.meta.env.BASE_URL}brand/qr.png`;
+    const res = await fetch(src);
+    if (!res.ok) return null;
+    return await blobToDataUrl(await res.blob());
+  } catch {
+    return null;
+  }
+}
+
 /** Generate and download a PDF posture report for a single assessment. */
 export async function exportAssessmentPdf(client: Client, a: Assessment) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
@@ -28,13 +41,26 @@ export async function exportAssessmentPdf(client: Client, a: Assessment) {
   const margin = 40;
   let yPos = margin;
 
-  // Header
+  // Header (blue bar). The QR sits in the top-right on a white tile.
+  const qrData = await loadQrDataUrl();
   doc.setFillColor(14, 165, 233);
   doc.rect(0, 0, pageW, 70, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(22);
   doc.text('PostureLab Report', margin, 44);
+  if (qrData) {
+    const qrSize = 50;
+    const qx = pageW - margin - qrSize;
+    const qy = (70 - qrSize) / 2;
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(qx - 4, qy - 4, qrSize + 8, qrSize + 8, 4, 4, 'F');
+    try {
+      doc.addImage(qrData, 'PNG', qx, qy, qrSize, qrSize, undefined, 'FAST');
+    } catch {
+      /* QR format unsupported; skip */
+    }
+  }
   yPos = 96;
 
   doc.setTextColor(30, 41, 59);
@@ -132,9 +158,8 @@ export async function exportAssessmentPdf(client: Client, a: Assessment) {
     });
   }
 
-  // Footer disclaimer
-  const footer =
-    'PostureLab is an educational tool and does not provide medical advice, diagnosis, or treatment. Consult a qualified professional for health concerns.';
+  // Footer fine print
+  const footer = 'PostureLab is an educational tool, not medical advice.';
   doc.setFontSize(8);
   doc.setTextColor(148, 163, 184);
   const fLines = doc.splitTextToSize(footer, pageW - margin * 2);

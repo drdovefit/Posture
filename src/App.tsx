@@ -26,6 +26,20 @@ export default function App() {
           </NavLink>
           <div className="ml-auto flex items-center gap-2">
             <SyncButton />
+            <NavLink
+              to="/settings"
+              aria-label="Settings"
+              title="Settings"
+              className={({ isActive }) =>
+                `grid h-9 w-9 shrink-0 place-items-center rounded-full text-lg transition-colors ${
+                  isActive
+                    ? 'bg-brand-500 text-white'
+                    : 'text-slate-500 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`
+              }
+            >
+              ⚙
+            </NavLink>
           </div>
         </div>
         <nav className="flex gap-1 overflow-x-auto px-2 pb-2">

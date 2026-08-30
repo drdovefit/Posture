@@ -29,7 +29,7 @@ export const SUGGESTIONS: Record<string, Suggestion> = {
     title: 'Dead-bug / plank core work',
     category: 'strengthen',
     detail:
-      'Build anti-extension core control to keep the trunk stacked over the pelvis. 3 sets, 30–45s.',
+      'Build anti-extension core control to keep the trunk stacked over the pelvis. 3 sets, 30 to 45s.',
   },
   hipFlexorStretch: {
     id: 'hipFlexorStretch',

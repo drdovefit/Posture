@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../lib/db';
@@ -41,6 +42,21 @@ export default function DashboardPage() {
   const { activeId } = useActiveClient();
   const { user } = useAuth();
   const firstName = user?.displayName?.trim().split(/\s+/)[0];
+  const [showGuideTip, setShowGuideTip] = useState(() => {
+    try {
+      return !localStorage.getItem('posturelab-guide-seen');
+    } catch {
+      return false;
+    }
+  });
+  function dismissGuideTip() {
+    try {
+      localStorage.setItem('posturelab-guide-seen', '1');
+    } catch {
+      /* storage may be unavailable */
+    }
+    setShowGuideTip(false);
+  }
   const assessments = useLiveQuery(
     () =>
       activeId == null
@@ -60,10 +76,25 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">{firstName ? `Hi ${firstName}` : 'Hey there'}</h1>
+      {showGuideTip && (
+        <div className="card flex items-center gap-3 border-brand-200 bg-brand-50 p-4 dark:border-brand-900/40 dark:bg-brand-900/20">
+          <div className="flex-1 text-sm">
+            <span className="font-semibold">New here?</span> Take a look at the guide for the best results.
+          </div>
+          <Link to="/guide" onClick={dismissGuideTip} className="btn-primary whitespace-nowrap">
+            See the guide
+          </Link>
+          <button
+            onClick={dismissGuideTip}
+            aria-label="Dismiss"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800"
+          >
+            ✕
+          </button>
         </div>
+      )}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>{firstName && <h1 className="text-2xl font-bold">Hi {firstName}</h1>}</div>
         <Link to="/analyze" className="btn-primary">
           ＋ New analysis
         </Link>
@@ -75,9 +106,8 @@ export default function DashboardPage() {
             <div className="space-y-4">
               <h2 className="text-xl font-bold">See your posture, clearly.</h2>
               <p className="text-slate-500">
-                Upload a side, front, or back photo and PostureLab auto-detects
-                your joints, draws your plumb line, and scores your alignment —
-                privately, on your device.
+                Add a side or front photo. PostureLab finds your joints, maps
+                your posture, and gives you a score.
               </p>
               <Link to="/analyze" className="btn-primary">
                 Start your first analysis
@@ -130,7 +160,7 @@ export default function DashboardPage() {
                 ))}
               </div>
               <p className="mt-2 text-xs text-slate-400">
-                From your latest scan · educational only, not a treatment plan.
+                From your latest scan.
               </p>
             </div>
           )}

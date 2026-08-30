@@ -62,7 +62,7 @@ export default function SignInModal({ title, subtitle, onSignedIn, onClose }: Pr
       await resetPassword(em);
       recordResetSent(em);
       setStatusOk(true);
-      setStatus(`Password reset link sent to ${em} — check your inbox and spam.`);
+      setStatus(`Password reset link sent to ${em}. Check your inbox.`);
     } catch (e) {
       setStatusOk(false);
       setStatus(authErrorMessage(e));
@@ -109,7 +109,7 @@ export default function SignInModal({ title, subtitle, onSignedIn, onClose }: Pr
     }
     if (mode === 'signup' && password !== confirm) {
       setStatusOk(false);
-      setStatus('Passwords don’t match — type the same one in both boxes.');
+      setStatus('Passwords do not match. Type the same one in both boxes.');
       return;
     }
     setBusy(true);
@@ -149,7 +149,7 @@ export default function SignInModal({ title, subtitle, onSignedIn, onClose }: Pr
         <div>
           <h2 className="text-lg font-bold">{title ?? 'Log in to save'}</h2>
           <p className="mt-1 text-sm text-slate-500">
-            {subtitle ?? "Don't worry — you won't get any spam."}
+            {subtitle ?? 'Save your results to your account.'}
           </p>
         </div>
 

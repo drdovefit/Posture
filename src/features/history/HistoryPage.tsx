@@ -163,7 +163,7 @@ export default function HistoryPage() {
             loading="lazy"
           />
           <p className="p-6 pt-0 text-slate-500">
-            No saved assessments yet — analyze a photo and your progress will
+            No saved assessments yet. Analyze a photo and your progress will
             chart here over time.
           </p>
         </div>

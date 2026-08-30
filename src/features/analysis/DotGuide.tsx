@@ -19,16 +19,16 @@ interface Placement {
 
 const PLACEMENTS: Record<'lateral' | 'anterior', Placement[]> = {
   lateral: [
-    { slug: 'ear', label: 'Ear', where: 'On the tragus — the little flap in front of the ear canal (not the earlobe).' },
+    { slug: 'ear', label: 'Ear', where: 'On the tragus, the little flap in front of the ear canal (not the earlobe).' },
     { slug: 'shoulder', label: 'Shoulder', where: 'The bony tip of the shoulder (acromion), where the shoulder meets the arm.' },
-    { slug: 'hip', label: 'Hip', where: 'The greater trochanter — the bony bump on the outer side of the upper thigh.' },
-    { slug: 'pelvisFront', label: 'Front hip (ASIS)', where: 'The bony point at the front of your pelvis (the "hip bone" below your belt line) — used to measure pelvic tilt.' },
-    { slug: 'pelvisBack', label: 'Back hip (PSIS)', where: 'The bony dimple at the back of your pelvis, level with your belt at the back — the other end of the tilt line.' },
+    { slug: 'hip', label: 'Hip', where: 'The greater trochanter, the bony bump on the outer side of the upper thigh.' },
+    { slug: 'pelvisFront', label: 'Front hip (ASIS)', where: 'The bony point at the front of your pelvis (the "hip bone" below your belt line), used to measure pelvic tilt.' },
+    { slug: 'pelvisBack', label: 'Back hip (PSIS)', where: 'The bony dimple at the back of your pelvis, level with your belt at the back, the other end of the tilt line.' },
     { slug: 'knee', label: 'Knee', where: 'The center of the knee joint line, just behind the kneecap.' },
-    { slug: 'ankle', label: 'Ankle', where: 'The lateral malleolus — the ankle bone that sticks out, just above the foot.' },
+    { slug: 'ankle', label: 'Ankle', where: 'The lateral malleolus, the ankle bone that sticks out, just above the foot.' },
   ],
   anterior: [
-    { slug: 'eyes', label: 'Eyes', where: 'The center (pupil) of each eye — used to check head tilt.' },
+    { slug: 'eyes', label: 'Eyes', where: 'The center (pupil) of each eye, used to check head tilt.' },
     { slug: 'shoulders', label: 'Shoulders', where: 'The top outer bony point of each shoulder (acromion).' },
     { slug: 'hips', label: 'Hips', where: 'The front hip bone (ASIS), level with the top of the pelvis.' },
     { slug: 'knees', label: 'Knees', where: 'The center of each kneecap (patella).' },
@@ -138,7 +138,7 @@ export default function DotGuide({ view, open, onClose }: Props) {
                 </span>
                 <div className="text-sm">
                   <span className="font-semibold">{r.label}</span>
-                  <span className="text-slate-500"> — {r.where}</span>
+                  <span className="text-slate-500">: {r.where}</span>
                 </div>
               </li>
             ))}

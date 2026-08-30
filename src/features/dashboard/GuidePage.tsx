@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { BRAND_IMAGE_KEYS, storedBrandImage } from '../../lib/brandImages';
 
 type Tab = 'side' | 'front';
@@ -10,7 +11,7 @@ const CONTENT: Record<
   { title: string; image: string; how: string[]; measures: [string, string][] }
 > = {
   side: {
-    title: 'Side (lateral) view',
+    title: 'Side view',
     image: `${BASE}brand/side.jpg`,
     how: [
       'Stand side-on to the camera (your profile faces it).',
@@ -19,15 +20,15 @@ const CONTENT: Record<
       'Camera at hip height, ~3 m away, held level.',
     ],
     measures: [
-      ['Forward head', 'Ear carried ahead of the shoulder — loads the neck.'],
+      ['Forward head', 'Ear carried ahead of the shoulder, which loads the neck.'],
       ['Trunk lean', 'Upper body tipped forward or back of vertical.'],
       ['Hip / pelvis position', 'Pelvis shifted relative to the ankles.'],
-      ['Knee alignment', 'Knee bent or hyper-extended in standing.'],
-      ['Overall plumb', 'How well the whole body stacks over the ankles.'],
+      ['Knee alignment', 'Knee bent or locked back in standing.'],
+      ['Overall stacking', 'How well the whole body stacks over the ankles.'],
     ],
   },
   front: {
-    title: 'Front (anterior) view',
+    title: 'Front view',
     image: `${BASE}brand/front.png`,
     how: [
       'Face the camera straight on.',
@@ -46,10 +47,10 @@ const CONTENT: Record<
 };
 
 const steps = [
-  ['Pick the view & add a photo', 'Choose Side or Front, then add or capture a full-body photo.'],
-  ['Let AI place the points', 'PostureLab auto-detects your joints and draws the plumb line. Drag any point to fine-tune — measurements update live.'],
-  ['Read your score', 'Each measurement is graded good / mild / moderate and combined into a 0–100 posture score.'],
-  ['Track progress', 'Save it, compare before/after, and follow your trend over time.'],
+  ['Pick the view and add a photo', 'Choose Side or Front, then add or capture a full-body photo.'],
+  ['The points appear on your joints', 'PostureLab finds your joints and draws a straight guide line. Drag any point to fine-tune, and the measurements update as you go.'],
+  ['Read your score', 'Each measurement is graded good, mild, or moderate, then combined into a score out of 100.'],
+  ['Track progress', 'Save it, compare before and after, and follow your trend over time.'],
 ];
 
 export default function GuidePage() {
@@ -124,7 +125,7 @@ export default function GuidePage() {
       <div className="card space-y-3 p-5">
         <h2 className="text-lg font-bold">What to wear</h2>
         <p className="text-sm text-slate-500">
-          Fitted clothing so your joints show — shorts or leggings with a fitted
+          Fitted clothing so your joints show: shorts or leggings with a fitted
           top or sports bra. Baggy clothes hide the hips and shoulders and throw
           the score off.
         </p>
@@ -140,7 +141,7 @@ export default function GuidePage() {
       </div>
 
       <div>
-        <h2 className="mb-3 text-lg font-semibold">The 4 steps</h2>
+        <h2 className="mb-3 text-lg font-semibold">The steps</h2>
         <ol className="space-y-3">
           {steps.map(([title, body], i) => (
             <li key={title} className="card flex gap-4 p-4">
@@ -156,11 +157,14 @@ export default function GuidePage() {
         </ol>
       </div>
 
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
-        <strong>Medical disclaimer.</strong> PostureLab is an educational and
-        self-tracking tool. It does not diagnose, treat, or replace assessment by
-        a qualified healthcare professional. Photo-based measurements are
-        estimates and depend on camera angle and pose.
+      <div className="card flex flex-col items-center gap-3 p-6 text-center">
+        <h2 className="text-lg font-bold">Ready to go?</h2>
+        <p className="text-sm text-slate-500">
+          Pick a view, add a photo, and get your score in seconds.
+        </p>
+        <Link to="/analyze" className="btn-primary">
+          Start a scan
+        </Link>
       </div>
     </div>
   );

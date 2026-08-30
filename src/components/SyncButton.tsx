@@ -81,7 +81,7 @@ export default function SyncButton() {
       await syncAll(user.uid);
       setStatus('Synced ✓ Your data is backed up.');
     } catch (e) {
-      setStatus('Sync failed — check your connection and try again.');
+      setStatus('Sync failed. Check your connection and try again.');
       console.error(e);
     } finally {
       setBusy(false);
@@ -128,7 +128,7 @@ export default function SyncButton() {
       }
     }
     if (mode === 'signup' && password !== confirm) {
-      setStatus('Passwords don’t match — type the same one in both boxes.');
+      setStatus('Passwords do not match. Type the same one in both boxes.');
       return;
     }
     setBusy(true);
@@ -162,7 +162,7 @@ export default function SyncButton() {
     try {
       await resetPassword(em);
       recordResetSent(em);
-      setStatus(`Password reset link sent to ${em} — check your inbox and spam.`);
+      setStatus(`Password reset link sent to ${em}. Check your inbox.`);
     } catch (e) {
       setStatus(authErrorMessage(e));
       console.error(e);
