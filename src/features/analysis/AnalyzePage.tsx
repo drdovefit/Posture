@@ -56,6 +56,7 @@ export default function AnalyzePage() {
   const { activeId } = useActiveClient();
   const { user } = useAuth();
   const [showSignIn, setShowSignIn] = useState(false);
+  const [animalSaveGone, setAnimalSaveGone] = useState(false);
   const pendingSave = useRef(false);
 
   const [view, setView] = useState<ViewType>('lateral');
@@ -95,6 +96,7 @@ export default function AnalyzePage() {
 
   async function loadBlob(blob: Blob) {
     const forView = view;
+    setAnimalSaveGone(false);
     const url = URL.createObjectURL(blob);
     const img = new Image();
     img.src = url;
@@ -489,17 +491,30 @@ export default function AnalyzePage() {
                 )}
               </div>
               <div>
-                <button className="btn-primary w-full" onClick={save} disabled={activeId == null}>
-                  {shot.savedId != null
-                    ? 'Saved ✓ · Update'
-                    : user
-                      ? 'Save assessment'
-                      : 'Log in to save assessment'}
-                </button>
-                {shot.savedId != null && (
-                  <p className="mt-1 text-center text-xs text-slate-400">
-                    Saved to your <Link to="/history" className="text-brand-600 hover:underline">history</Link>.
-                  </p>
+                {shot.animal ? (
+                  <button
+                    className={`btn-primary w-full transition-opacity duration-500 ${
+                      animalSaveGone ? 'pointer-events-none opacity-0' : ''
+                    }`}
+                    onClick={() => setAnimalSaveGone(true)}
+                  >
+                    Save assessment
+                  </button>
+                ) : (
+                  <>
+                    <button className="btn-primary w-full" onClick={save} disabled={activeId == null}>
+                      {shot.savedId != null
+                        ? 'Saved ✓ · Update'
+                        : user
+                          ? 'Save assessment'
+                          : 'Log in to save assessment'}
+                    </button>
+                    {shot.savedId != null && (
+                      <p className="mt-1 text-center text-xs text-slate-400">
+                        Saved to your <Link to="/history" className="text-brand-600 hover:underline">history</Link>.
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
               <div className="grid grid-cols-2 gap-2">
