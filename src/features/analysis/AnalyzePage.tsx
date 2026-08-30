@@ -381,13 +381,17 @@ export default function AnalyzePage() {
         <>
           <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
             <div className="space-y-3 lg:sticky lg:top-4 lg:self-start">
-              <PostureEditor
-                imageUrl={shot.url}
-                view={view}
-                landmarks={shot.landmarks}
-                metrics={result.metrics}
-                onChange={(lm) => patchShot(view, { landmarks: lm, detected: true, detectMsg: '' })}
-              />
+              {shot.animal ? (
+                <img src={shot.url} alt="" className="w-full rounded-2xl" />
+              ) : (
+                <PostureEditor
+                  imageUrl={shot.url}
+                  view={view}
+                  landmarks={shot.landmarks}
+                  metrics={result.metrics}
+                  onChange={(lm) => patchShot(view, { landmarks: lm, detected: true, detectMsg: '' })}
+                />
+              )}
               <div className="space-y-2">
                 {shot.detectMsg && (
                   <p className="text-sm text-slate-500">{shot.detectMsg}</p>
@@ -401,12 +405,16 @@ export default function AnalyzePage() {
                   </p>
                 ))}
                 <div className="flex flex-wrap gap-2">
-                  <button className="btn-ghost" onClick={() => setShowDotGuide(true)}>
-                    ? Dot guide
-                  </button>
-                  <button className="btn-ghost" onClick={reDetect} disabled={detecting}>
-                    {detecting ? 'Detecting…' : 'Re-detect'}
-                  </button>
+                  {!shot.animal && (
+                    <>
+                      <button className="btn-ghost" onClick={() => setShowDotGuide(true)}>
+                        ? Dot guide
+                      </button>
+                      <button className="btn-ghost" onClick={reDetect} disabled={detecting}>
+                        {detecting ? 'Detecting…' : 'Re-detect'}
+                      </button>
+                    </>
+                  )}
                   <button className="btn-ghost" onClick={replacePhoto}>
                     Replace photo
                   </button>
@@ -518,10 +526,20 @@ export default function AnalyzePage() {
                 )}
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <button className="btn-ghost" onClick={shareImage}>
+                <button
+                  className={`btn-ghost transition-opacity duration-500 ${
+                    shot.animal && animalSaveGone ? 'pointer-events-none opacity-0' : ''
+                  }`}
+                  onClick={shot.animal ? () => setAnimalSaveGone(true) : shareImage}
+                >
                   ⬆ Share
                 </button>
-                <button className="btn-ghost" onClick={downloadImage}>
+                <button
+                  className={`btn-ghost transition-opacity duration-500 ${
+                    shot.animal && animalSaveGone ? 'pointer-events-none opacity-0' : ''
+                  }`}
+                  onClick={shot.animal ? () => setAnimalSaveGone(true) : downloadImage}
+                >
                   ⬇ Download
                 </button>
               </div>
