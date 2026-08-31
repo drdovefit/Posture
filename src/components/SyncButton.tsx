@@ -238,7 +238,7 @@ export default function SyncButton() {
                     navigate('/profile');
                   }}
                 >
-                  Your profile
+                  About you
                 </button>
                 <button className="btn-primary w-full" onClick={runSync} disabled={busy}>
                   {busy ? 'Syncing…' : 'Sync now'}

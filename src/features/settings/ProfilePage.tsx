@@ -213,7 +213,7 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Your profile</h1>
+        <h1 className="text-2xl font-bold">About you</h1>
         <button
           className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
           onClick={() => setConfirm('reset')}
@@ -221,10 +221,6 @@ export default function ProfilePage() {
           Reset
         </button>
       </div>
-      <p className="text-sm text-slate-500">
-        This tailors your posture ranges to your body. It stays on your device, and nothing here
-        is shown on your results.
-      </p>
 
       <div className="card space-y-5 p-5">
         {/* Sex */}
