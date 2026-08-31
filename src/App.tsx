@@ -1,5 +1,7 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import SyncButton from './components/SyncButton';
+import { useAuth } from './state/auth';
 
 const nav = [
   { to: '/', label: 'Dashboard', icon: '◱', end: true },
@@ -12,6 +14,27 @@ const nav = [
 
 export default function App() {
   const loc = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const promptedRef = useRef(false);
+
+  // First time someone signs in, open the profile setup once. After they save
+  // it (posturelab-profile-done), it only shows from the account menu.
+  useEffect(() => {
+    if (!user) {
+      promptedRef.current = false;
+      return;
+    }
+    if (promptedRef.current) return;
+    promptedRef.current = true;
+    let done = false;
+    try {
+      done = !!localStorage.getItem('posturelab-profile-done');
+    } catch {
+      done = false;
+    }
+    if (!done) navigate('/profile');
+  }, [user, navigate]);
 
   return (
     <div className="mx-auto flex min-h-full max-w-6xl flex-col">

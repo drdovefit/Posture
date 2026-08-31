@@ -1,4 +1,4 @@
-import { bmi, type Profile } from '../profile';
+import { ageFromProfile, bmi, type Profile } from '../profile';
 
 /**
  * Per-metric personalization, grounded in the posture literature (see the
@@ -30,7 +30,8 @@ export function metricAdjustment(id: string, p: Profile): MetricAdjustment {
     if (c) caveats.push(c);
   };
 
-  const { age, sex, pregnancy, fitness } = p;
+  const { sex, pregnancy, fitness } = p;
+  const age = ageFromProfile(p);
   void fitness; // shapes tips elsewhere, never the score
   const b = bmi(p);
   const conditions = p.conditions ?? [];

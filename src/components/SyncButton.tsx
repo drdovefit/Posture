@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   useAuth,
   signInWithGoogle,
@@ -31,6 +32,7 @@ const GoogleIcon = () => (
 
 export default function SyncButton() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
@@ -229,6 +231,15 @@ export default function SyncButton() {
                     </button>
                   </div>
                 </div>
+                <button
+                  className="btn-ghost w-full"
+                  onClick={() => {
+                    closeModal();
+                    navigate('/profile');
+                  }}
+                >
+                  Your profile
+                </button>
                 <button className="btn-primary w-full" onClick={runSync} disabled={busy}>
                   {busy ? 'Syncing…' : 'Sync now'}
                 </button>
