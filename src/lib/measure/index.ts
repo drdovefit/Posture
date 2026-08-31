@@ -14,6 +14,8 @@ import {
   midpoint,
   tiltFromHorizontal,
 } from './geometry';
+import { getProfile, type Profile } from '../profile';
+import { metricAdjustment } from './personalize';
 
 /**
  * The measurement engine. Given a set of landmarks (normalized 0..1 image
@@ -57,8 +59,9 @@ interface MetricSpec {
   normal: string;
 }
 
-function buildMetric(spec: MetricSpec, value: number): Metric {
+function buildMetric(spec: MetricSpec, value: number, caveat?: string): Metric {
   const severity = severityFor(value, spec.band);
+  const base = spec.explain(severity, value);
   return {
     id: spec.id,
     label: spec.label,
@@ -66,14 +69,27 @@ function buildMetric(spec: MetricSpec, value: number): Metric {
     unit: spec.unit,
     display: spec.format(value),
     severity,
-    explanation: spec.explain(severity, value),
+    explanation: caveat && severity !== 'good' ? `${base} ${caveat}` : base,
     normal: spec.normal,
+  };
+}
+
+/** Apply the profile's per-metric tuning to a spec's band and weight. */
+function tuneSpec(spec: MetricSpec, profile: Profile): { spec: MetricSpec; caveat?: string } {
+  const adj = metricAdjustment(spec.id, profile);
+  return {
+    spec: {
+      ...spec,
+      band: { good: spec.band.good + adj.goodAdd, mild: spec.band.mild + adj.mildAdd },
+      weight: spec.weight * adj.weightMul,
+    },
+    caveat: adj.caveat,
   };
 }
 
 // --- Lateral (side) view ------------------------------------------------------
 
-function analyzeLateral(lm: Landmarks): { metrics: Metric[]; specs: MetricSpec[] } {
+function analyzeLateral(lm: Landmarks, profile: Profile): { metrics: Metric[]; specs: MetricSpec[] } {
   const metrics: Metric[] = [];
   const usedSpecs: MetricSpec[] = [];
   const have = (...ps: (Point | undefined)[]) => ps.every(Boolean) as boolean;
@@ -83,8 +99,9 @@ function analyzeLateral(lm: Landmarks): { metrics: Metric[]; specs: MetricSpec[]
     lm.shoulder && lm.ankle ? Math.max(distance(lm.shoulder, lm.ankle), 1e-6) : 1;
 
   const push = (spec: MetricSpec, value: number) => {
-    usedSpecs.push(spec);
-    metrics.push(buildMetric(spec, value));
+    const tuned = tuneSpec(spec, profile);
+    usedSpecs.push(tuned.spec);
+    metrics.push(buildMetric(tuned.spec, value, tuned.caveat));
   };
 
   if (have(lm.ear, lm.shoulder)) {
@@ -219,7 +236,7 @@ function analyzeLateral(lm: Landmarks): { metrics: Metric[]; specs: MetricSpec[]
 
 // --- Anterior / Posterior (front / back) view --------------------------------
 
-function analyzeFrontal(lm: Landmarks): { metrics: Metric[]; specs: MetricSpec[] } {
+function analyzeFrontal(lm: Landmarks, profile: Profile): { metrics: Metric[]; specs: MetricSpec[] } {
   const metrics: Metric[] = [];
   const usedSpecs: MetricSpec[] = [];
   const have = (...ps: (Point | undefined)[]) => ps.every(Boolean) as boolean;
@@ -233,8 +250,9 @@ function analyzeFrontal(lm: Landmarks): { metrics: Metric[]; specs: MetricSpec[]
     shoulderMid && ankleMid ? Math.max(distance(shoulderMid, ankleMid), 1e-6) : 1;
 
   const push = (spec: MetricSpec, value: number) => {
-    usedSpecs.push(spec);
-    metrics.push(buildMetric(spec, value));
+    const tuned = tuneSpec(spec, profile);
+    usedSpecs.push(tuned.spec);
+    metrics.push(buildMetric(tuned.spec, value, tuned.caveat));
   };
 
   const eyeL = lm.eyeL ?? lm.earL;
@@ -375,9 +393,13 @@ function suggestionsForMetric(id: string, value = 0): string[] {
 }
 
 /** Run the full analysis for a view. */
-export function analyze(view: ViewType, lm: Landmarks): AnalysisResult {
+export function analyze(
+  view: ViewType,
+  lm: Landmarks,
+  profile: Profile = getProfile(),
+): AnalysisResult {
   const { metrics, specs } =
-    view === 'lateral' ? analyzeLateral(lm) : analyzeFrontal(lm);
+    view === 'lateral' ? analyzeLateral(lm, profile) : analyzeFrontal(lm, profile);
 
   // Weighted score. Total possible penalty = sum of weights; score scales that.
   let totalWeight = 0;
