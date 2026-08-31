@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { addPain, db, deletePain } from '../../lib/db';
+import { addPain, db, deletePain, deletePainMany } from '../../lib/db';
 import { useActiveClient } from '../../state/useClient';
 
 const NOTES_MAX = 399;
@@ -93,7 +93,7 @@ export default function PainPage() {
 
   async function deleteSelected() {
     if (!selected.size) return;
-    await db.pain.bulkDelete([...selected]);
+    await deletePainMany([...selected]);
     setSelected(new Set());
     setSelecting(false);
   }

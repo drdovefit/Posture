@@ -1,6 +1,7 @@
-import { collection, doc, getDocs, setDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, setDoc } from 'firebase/firestore';
 import { firestore } from './firebase';
 import { db } from './db';
+import { getTombstones } from './tombstones';
 import type { Assessment } from './types';
 
 /**
@@ -52,6 +53,14 @@ export async function syncAll(uid: string): Promise<SyncResult> {
 
   // --- Clients --------------------------------------------------------------
   const clientsCol = collection(firestore, ...base, 'clients');
+  const clientTombs = getTombstones('clients');
+  for (const cid of clientTombs) {
+    try {
+      await deleteDoc(doc(clientsCol, cid));
+    } catch {
+      /* ignore */
+    }
+  }
   let clients = await db.clients.toArray();
   for (const c of clients) {
     if (c.synced) continue; // already uploaded this exact version
@@ -73,6 +82,7 @@ export async function syncAll(uid: string): Promise<SyncResult> {
   const localClientCids = new Set(clients.map((c) => c.cid));
   for (const d of remoteClients.docs) {
     const data = d.data() as { cid: string; name: string; dob?: string; notes?: string; createdAt: number };
+    if (clientTombs.has(data.cid)) continue;
     if (!localClientCids.has(data.cid)) {
       await db.clients.add({
         name: data.name,
@@ -98,6 +108,14 @@ export async function syncAll(uid: string): Promise<SyncResult> {
 
   // --- Assessments ----------------------------------------------------------
   const aCol = collection(firestore, ...base, 'assessments');
+  const aTombs = getTombstones('assessments');
+  for (const cid of aTombs) {
+    try {
+      await deleteDoc(doc(aCol, cid));
+    } catch {
+      /* ignore */
+    }
+  }
   const assessments = await db.assessments.toArray();
   for (const a of assessments) {
     if (a.synced) continue; // already uploaded this exact version
@@ -127,6 +145,7 @@ export async function syncAll(uid: string): Promise<SyncResult> {
   for (const d of remoteA.docs) {
     const data = d.data() as Record<string, unknown>;
     const cid = data.cid as string;
+    if (aTombs.has(cid)) continue;
     if (localACids.has(cid)) continue;
     const blob = data.image ? await dataUrlToBlob(data.image as string) : new Blob();
     const clientCid = data.clientCid as string | null;
@@ -151,6 +170,14 @@ export async function syncAll(uid: string): Promise<SyncResult> {
 
   // --- Pain -----------------------------------------------------------------
   const pCol = collection(firestore, ...base, 'pain');
+  const pTombs = getTombstones('pain');
+  for (const cid of pTombs) {
+    try {
+      await deleteDoc(doc(pCol, cid));
+    } catch {
+      /* ignore */
+    }
+  }
   const pains = await db.pain.toArray();
   for (const p of pains) {
     if (p.synced) continue; // already uploaded this exact version
@@ -175,6 +202,7 @@ export async function syncAll(uid: string): Promise<SyncResult> {
   for (const d of remoteP.docs) {
     const data = d.data() as Record<string, unknown>;
     const cid = data.cid as string;
+    if (pTombs.has(cid)) continue;
     if (localPCids.has(cid)) continue;
     const clientCid = data.clientCid as string | null;
     const clientId = (clientCid ? cidToId.get(clientCid) : undefined) ?? fallbackClientId;

@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import type { Assessment, Client, PainEntry } from './types';
+import { addTombstone } from './tombstones';
 
 /**
  * Local-first storage. Everything (photos included, as Blobs) lives in the
@@ -46,6 +47,8 @@ export async function assessmentsForClient(clientId: number) {
 }
 
 export async function deleteAssessment(id: number) {
+  const rec = await db.assessments.get(id);
+  if (rec?.cid) addTombstone('assessments', rec.cid);
   return db.assessments.delete(id);
 }
 
@@ -60,5 +63,15 @@ export async function painForClient(clientId: number) {
 }
 
 export async function deletePain(id: number) {
+  const rec = await db.pain.get(id);
+  if (rec?.cid) addTombstone('pain', rec.cid);
   return db.pain.delete(id);
+}
+
+export async function deletePainMany(ids: number[]) {
+  const recs = await db.pain.bulkGet(ids);
+  recs.forEach((r) => {
+    if (r?.cid) addTombstone('pain', r.cid);
+  });
+  return db.pain.bulkDelete(ids);
 }
