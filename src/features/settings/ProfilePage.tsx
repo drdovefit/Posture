@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   getProfile,
@@ -28,12 +28,14 @@ const INJURIES: { id: Injury; label: string }[] = [
 ];
 
 const ACTIVITY = [
-  { name: 'Sedentary', ex: 'Mostly sitting, little exercise.' },
-  { name: 'Lightly active', ex: 'Light walks, occasional activity.' },
-  { name: 'Moderately active', ex: 'Exercise a few times a week.' },
-  { name: 'Very active', ex: 'Exercise most days.' },
-  { name: 'Athletic', ex: 'Intense training almost daily.' },
+  { name: 'Sedentary', ex: 'Mostly sitting, with little or no exercise.' },
+  { name: 'Lightly active', ex: 'Short walks or light chores most days.' },
+  { name: 'Moderately active', ex: 'Regular workouts a few times a week.' },
+  { name: 'Very active', ex: 'Hard training or sport most days of the week.' },
+  { name: 'Athlete', ex: 'Intense daily training or competitive sport.' },
+  { name: 'Bodybuilder', ex: 'Serious strength training with high muscle mass.' },
 ];
+const ACT_MAX = ACTIVITY.length;
 
 function Chip({
   active,
@@ -79,10 +81,21 @@ export default function ProfilePage() {
   const [conditions, setConditions] = useState<Condition[]>(p0.conditions ?? []);
   const [injuries, setInjuries] = useState<Injury[]>(p0.injuries ?? []);
   const [fitness, setFitness] = useState<number>(
-    typeof p0.fitness === 'number' && p0.fitness >= 1 && p0.fitness <= 5 ? p0.fitness : 3,
+    typeof p0.fitness === 'number' && p0.fitness >= 1 && p0.fitness <= ACT_MAX ? p0.fitness : 3,
   );
-  const actLevel = Math.min(Math.max(Math.round(fitness) || 3, 1), 5);
+  // Free-moving slider that snaps to the nearest level on release (like the pain diary).
+  const [fitDragging, setFitDragging] = useState(false);
+  const [fitPos, setFitPos] = useState(fitness);
+  const fitRef = useRef(fitness);
+  const fitVal = fitDragging ? fitPos : fitness;
+  const actLevel = Math.min(Math.max(Math.round(fitVal) || 3, 1), ACT_MAX);
   const act = ACTIVITY[actLevel - 1];
+  function commitFitness() {
+    const v = Math.min(Math.max(Math.round(fitRef.current), 1), ACT_MAX);
+    setFitness(v);
+    setFitPos(v);
+    setFitDragging(false);
+  }
 
   const [dirty, setDirty] = useState(false);
   const [savedOnce, setSavedOnce] = useState(false);
@@ -337,11 +350,27 @@ export default function ProfilePage() {
           <input
             type="range"
             min={1}
-            max={5}
-            step={1}
-            value={fitness}
-            onChange={(e) => { setFitness(Number(e.target.value)); mark(); }}
+            max={ACT_MAX}
+            step="any"
+            value={fitVal}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              fitRef.current = v;
+              setFitPos(v);
+              setFitDragging(true);
+              mark();
+            }}
+            onPointerUp={commitFitness}
+            onPointerCancel={commitFitness}
+            onTouchEnd={commitFitness}
+            onKeyUp={commitFitness}
+            onBlur={commitFitness}
             className="w-full accent-brand-500"
+            style={{
+              background: `linear-gradient(to right, #0ea5e9 ${((fitVal - 1) / (ACT_MAX - 1)) * 100}%, #e2e8f0 ${
+                ((fitVal - 1) / (ACT_MAX - 1)) * 100
+              }%)`,
+            }}
           />
           <div className="mt-1 text-sm">
             <span className="font-semibold">{act.name}.</span>
