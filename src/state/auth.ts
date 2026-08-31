@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -45,7 +46,13 @@ export async function signInEmail(email: string, password: string) {
 }
 
 export async function signUpEmail(email: string, password: string) {
-  await createUserWithEmailAndPassword(auth, email, password);
+  const cred = await createUserWithEmailAndPassword(auth, email, password);
+  // Send a verification link so the address is confirmed to be really theirs.
+  try {
+    await sendEmailVerification(cred.user);
+  } catch {
+    /* non-blocking: account still created */
+  }
 }
 
 /** Email the user a link to reset their password. */
@@ -67,7 +74,7 @@ export function authErrorMessage(err: unknown): string {
     case 'auth/invalid-credential':
     case 'auth/wrong-password':
     case 'auth/user-not-found':
-      return 'Wrong email or password.';
+      return 'Wrong email or password. New here? Create an account below.';
     case 'auth/unauthorized-domain':
       return 'This site isn’t authorized for Google sign-in yet. Add its domain in Firebase → Authentication → Settings → Authorized domains.';
     case 'auth/operation-not-allowed':
