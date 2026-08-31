@@ -1,8 +1,16 @@
 import { addDoc, collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { auth, firestore } from './firebase';
 
-/** Only this account can read submitted feedback (enforced by Firestore rules). */
-export const OWNER_EMAIL = 'drdovefit@gmail.com';
+/** These accounts can read submitted feedback (also enforced by Firestore rules). */
+export const OWNER_EMAILS = [
+  'drdovefit@gmail.com',
+  'drdoveifbbpro@gmail.com',
+  'nolenp223@gmail.com',
+];
+
+export function isOwnerEmail(email?: string | null): boolean {
+  return !!email && OWNER_EMAILS.includes(email.toLowerCase());
+}
 
 export type FeedbackType = 'bug' | 'feature';
 

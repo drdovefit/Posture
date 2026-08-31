@@ -4,7 +4,7 @@ import { useAuth } from '../../state/auth';
 import {
   submitFeedback,
   loadFeedback,
-  OWNER_EMAIL,
+  isOwnerEmail,
   type FeedbackType,
   type FeedbackItem,
 } from '../../lib/feedback';
@@ -35,7 +35,7 @@ function Chip({
 
 export default function SettingsPage() {
   const { user } = useAuth();
-  const isOwner = user?.email === OWNER_EMAIL;
+  const isOwner = isOwnerEmail(user?.email);
 
   // --- Feedback --------------------------------------------------------------
   const [type, setType] = useState<FeedbackType>('bug');
