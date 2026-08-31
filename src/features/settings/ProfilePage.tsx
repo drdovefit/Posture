@@ -78,7 +78,11 @@ export default function ProfilePage() {
   const [pregnancy, setPregnancy] = useState<Pregnancy>(p0.pregnancy ?? 'none');
   const [conditions, setConditions] = useState<Condition[]>(p0.conditions ?? []);
   const [injuries, setInjuries] = useState<Injury[]>(p0.injuries ?? []);
-  const [fitness, setFitness] = useState<number>(p0.fitness ?? 3);
+  const [fitness, setFitness] = useState<number>(
+    typeof p0.fitness === 'number' && p0.fitness >= 1 && p0.fitness <= 5 ? p0.fitness : 3,
+  );
+  const actLevel = Math.min(Math.max(Math.round(fitness) || 3, 1), 5);
+  const act = ACTIVITY[actLevel - 1];
 
   const [dirty, setDirty] = useState(false);
   const [savedOnce, setSavedOnce] = useState(false);
@@ -340,8 +344,8 @@ export default function ProfilePage() {
             className="w-full accent-brand-500"
           />
           <div className="mt-1 text-sm">
-            <span className="font-semibold">{ACTIVITY[fitness - 1].name}</span>
-            <span className="text-slate-500"> — {ACTIVITY[fitness - 1].ex}</span>
+            <span className="font-semibold">{act.name}.</span>
+            <span className="text-slate-500"> {act.ex}</span>
           </div>
         </div>
       </div>
