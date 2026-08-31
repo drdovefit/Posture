@@ -64,6 +64,8 @@ export interface AnalysisResult {
 /** Stable cross-device id assigned when a record is first synced to the cloud. */
 export interface Syncable {
   cid?: string;
+  /** True once this exact version was pushed to the cloud; cleared on edit. */
+  synced?: boolean;
 }
 
 export interface Client extends Syncable {

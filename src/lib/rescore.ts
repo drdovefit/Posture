@@ -13,7 +13,7 @@ export async function rescoreAll(profile: Profile): Promise<number> {
   for (const a of all) {
     if (a.id == null) continue;
     const r = analyze(a.view, a.landmarks, profile);
-    await db.assessments.update(a.id, { metrics: r.metrics, score: r.score });
+    await db.assessments.update(a.id, { metrics: r.metrics, score: r.score, synced: false });
   }
   return all.length;
 }

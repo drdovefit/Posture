@@ -237,6 +237,7 @@ export default function AnalyzePage() {
       landmarks: s.landmarks,
       metrics: result.metrics,
       score: result.score,
+      synced: false,
     };
     if (s.savedId != null) {
       await db.assessments.update(s.savedId, data);

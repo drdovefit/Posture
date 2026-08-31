@@ -54,6 +54,7 @@ export async function syncAll(uid: string): Promise<SyncResult> {
   const clientsCol = collection(firestore, ...base, 'clients');
   let clients = await db.clients.toArray();
   for (const c of clients) {
+    if (c.synced) continue; // already uploaded this exact version
     if (!c.cid) {
       c.cid = uuid();
       await db.clients.update(c.id!, { cid: c.cid });
@@ -65,6 +66,7 @@ export async function syncAll(uid: string): Promise<SyncResult> {
       notes: c.notes ?? null,
       createdAt: c.createdAt,
     });
+    await db.clients.update(c.id!, { synced: true });
     pushed++;
   }
   const remoteClients = await getDocs(clientsCol);
@@ -78,6 +80,7 @@ export async function syncAll(uid: string): Promise<SyncResult> {
         notes: data.notes ?? undefined,
         createdAt: data.createdAt,
         cid: data.cid,
+        synced: true,
       });
       pulled++;
     }
@@ -97,6 +100,7 @@ export async function syncAll(uid: string): Promise<SyncResult> {
   const aCol = collection(firestore, ...base, 'assessments');
   const assessments = await db.assessments.toArray();
   for (const a of assessments) {
+    if (a.synced) continue; // already uploaded this exact version
     if (!a.cid) {
       a.cid = uuid();
       await db.assessments.update(a.id!, { cid: a.cid });
@@ -115,6 +119,7 @@ export async function syncAll(uid: string): Promise<SyncResult> {
       score: a.score,
       image,
     });
+    await db.assessments.update(a.id!, { synced: true });
     pushed++;
   }
   const remoteA = await getDocs(aCol);
@@ -139,6 +144,7 @@ export async function syncAll(uid: string): Promise<SyncResult> {
       metrics: data.metrics as Assessment['metrics'],
       score: data.score as number,
       cid,
+      synced: true,
     });
     pulled++;
   }
@@ -147,6 +153,7 @@ export async function syncAll(uid: string): Promise<SyncResult> {
   const pCol = collection(firestore, ...base, 'pain');
   const pains = await db.pain.toArray();
   for (const p of pains) {
+    if (p.synced) continue; // already uploaded this exact version
     if (!p.cid) {
       p.cid = uuid();
       await db.pain.update(p.id!, { cid: p.cid });
@@ -160,6 +167,7 @@ export async function syncAll(uid: string): Promise<SyncResult> {
       severity: p.severity,
       notes: p.notes ?? null,
     });
+    await db.pain.update(p.id!, { synced: true });
     pushed++;
   }
   const remoteP = await getDocs(pCol);
@@ -179,6 +187,7 @@ export async function syncAll(uid: string): Promise<SyncResult> {
       severity: data.severity as number,
       notes: (data.notes as string) ?? undefined,
       cid,
+      synced: true,
     });
     pulled++;
   }
