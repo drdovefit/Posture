@@ -233,10 +233,10 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black">
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#eef4ff]">
       <div className="relative flex-1 overflow-hidden">
         {error ? (
-          <div className="grid h-full place-items-center p-6 text-center text-slate-300">
+          <div className="grid h-full place-items-center p-6 text-center text-slate-600">
             {error}
           </div>
         ) : (
@@ -375,13 +375,15 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
         )}
       </div>
 
-      <div className="space-y-3 bg-black p-5">
+      <div className="space-y-3 bg-[#eef4ff] p-5">
         <div className="flex items-center justify-center">
-          <div className="flex overflow-hidden rounded-full border border-slate-700 text-sm text-white">
+          <div className="flex overflow-hidden rounded-full border border-slate-300 text-sm">
             {TIMERS.map((t) => (
               <button
                 key={t}
-                className={`px-3 py-1.5 ${timer === t ? 'bg-brand-500' : 'bg-slate-800'}`}
+                className={`px-3 py-1.5 ${
+                  timer === t ? 'bg-brand-500 text-white' : 'bg-white text-slate-600'
+                }`}
                 onClick={() => setTimer(t)}
               >
                 {t === 0 ? 'Off' : `${t}s`}
@@ -391,13 +393,13 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
         </div>
 
         <div className="flex items-center justify-between gap-4">
-          <button className="btn-ghost !bg-slate-800 !text-white" onClick={onClose}>
+          <button className="btn-ghost !bg-white !text-slate-700 border border-slate-300" onClick={onClose}>
             Cancel
           </button>
           <button
             onClick={countdown > 0 ? cancelCountdown : shoot}
             disabled={!!error}
-            className="h-16 w-16 rounded-full border-4 border-white disabled:opacity-40"
+            className="h-16 w-16 rounded-full border-4 border-slate-400 shadow-md disabled:opacity-40"
             style={
               shutterState === 'fade'
                 ? {
