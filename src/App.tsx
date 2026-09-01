@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import SyncButton from './components/SyncButton';
+import FeedbackBanner from './components/FeedbackBanner';
 import VerifyEmailGate from './components/VerifyEmailGate';
 import { useAuth } from './state/auth';
 import { handleAccountChange } from './lib/accountData';
@@ -120,6 +121,8 @@ export default function App() {
           ))}
         </nav>
       </header>
+
+      <FeedbackBanner />
 
       <main key={loc.pathname} className="flex-1 px-4 py-6">
         <Outlet />

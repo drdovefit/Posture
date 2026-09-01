@@ -1,13 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../state/auth';
-import {
-  submitFeedback,
-  loadFeedback,
-  isOwnerEmail,
-  type FeedbackType,
-  type FeedbackItem,
-} from '../../lib/feedback';
+import Submissions from '../../components/Submissions';
+import { submitFeedback, isOwnerEmail, type FeedbackType } from '../../lib/feedback';
 
 function Chip({
   active,
@@ -60,21 +55,6 @@ export default function SettingsPage() {
       setBusy(false);
     }
   }
-
-  const [items, setItems] = useState<FeedbackItem[] | null>(null);
-  const [loadingItems, setLoadingItems] = useState(false);
-  async function view() {
-    setLoadingItems(true);
-    try {
-      setItems(await loadFeedback());
-    } catch {
-      setItems([]);
-    } finally {
-      setLoadingItems(false);
-    }
-  }
-  const fmt = (t: number) =>
-    new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -134,42 +114,7 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {isOwner && (
-        <div className="card space-y-3 p-5">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold">Submissions</h2>
-            <button className="btn-ghost" onClick={view} disabled={loadingItems}>
-              {loadingItems ? 'Loading…' : items ? 'Refresh' : 'View'}
-            </button>
-          </div>
-          {items && items.length === 0 && (
-            <p className="text-sm text-slate-500">Nothing submitted yet.</p>
-          )}
-          {items && items.length > 0 && (
-            <ul className="space-y-2">
-              {items.map((it) => (
-                <li key={it.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-                  <div className="mb-1 flex items-center gap-2 text-xs text-slate-500">
-                    <span
-                      className={`chip ${
-                        it.type === 'bug'
-                          ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200'
-                          : 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200'
-                      }`}
-                    >
-                      {it.type === 'bug' ? 'Bug' : 'Feature'}
-                    </span>
-                    <span>{fmt(it.createdAt)}</span>
-                    {it.email && <span className="truncate">· {it.email}</span>}
-                    {it.appVersion && <span>· v{it.appVersion}</span>}
-                  </div>
-                  <p className="whitespace-pre-wrap text-sm">{it.text}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+      {isOwner && <Submissions />}
 
       <div className="card p-5">
         <h2 className="mb-1 font-semibold">About</h2>

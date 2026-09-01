@@ -1,0 +1,49 @@
+rules_version = '2';
+
+// PostureLab Firestore security rules.
+//
+// Publish these in the Firebase console: Build > Firestore Database > Rules.
+// They keep every user's scans, pain entries and clients private to their own
+// account, and give the three owner accounts full control of feedback while
+// still letting a submitter read their own item and dismiss its thank-you.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // The accounts allowed to read and manage all feedback.
+    function isOwner() {
+      return request.auth != null && request.auth.token.email in [
+        'drdovefit@gmail.com',
+        'drdoveifbbpro@gmail.com',
+        'nolenp223@gmail.com'
+      ];
+    }
+
+    // --- Per-user data: assessments, pain entries, clients -------------------
+    // Each user document tree lives under their own uid and is private to them.
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // --- Feedback (bug reports / feature requests) ---------------------------
+    match /feedback/{id} {
+      // Anyone signed in (or the app while signed out) can submit.
+      allow create: if true;
+
+      // Owners can read every submission; a submitter can read their own.
+      allow read: if isOwner()
+        || (request.auth != null && resource.data.uid == request.auth.uid);
+
+      // Owners can update anything (hold / mark done) and delete.
+      // A submitter may update ONLY the dismissedByUser flag on their own item.
+      allow delete: if isOwner();
+      allow update: if isOwner()
+        || (
+          request.auth != null
+          && resource.data.uid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['dismissedByUser'])
+        );
+    }
+  }
+}
