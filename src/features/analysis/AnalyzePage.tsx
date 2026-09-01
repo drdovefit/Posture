@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import type { Landmarks, ViewType } from '../../lib/types';
 import { analyze } from '../../lib/measure';
 import { detectPose, type RawLandmark } from '../../lib/pose/landmarker';
@@ -67,7 +67,6 @@ interface Shot {
 export default function AnalyzePage() {
   const { activeId } = useActiveClient();
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [showSignIn, setShowSignIn] = useState(false);
   const [animalSaveGone, setAnimalSaveGone] = useState(false);
   const pendingSave = useRef(false);
@@ -108,6 +107,11 @@ export default function AnalyzePage() {
   }
 
   async function loadBlob(blob: Blob) {
+    // Adding a photo (file, paste, or drag-drop) needs an account.
+    if (!user) {
+      setShowSignIn(true);
+      return;
+    }
     const forView = view;
     setAnimalSaveGone(false);
     const url = URL.createObjectURL(blob);
@@ -384,7 +388,10 @@ export default function AnalyzePage() {
                 <button className="btn-primary" onClick={() => fileRef.current?.click()}>
                   ＋ Add {viewLabel} photo
                 </button>
-                <button className="btn-ghost" onClick={() => setShowCamera(true)}>
+                <button
+                  className="btn-ghost"
+                  onClick={() => (user ? setShowCamera(true) : setShowSignIn(true))}
+                >
                   Use camera
                 </button>
               </div>
@@ -616,8 +623,8 @@ export default function AnalyzePage() {
 
       {showSignIn && (
         <SignInModal
-          title="Log in to save your assessment"
-          subtitle="Save this assessment to your account."
+          title="Sign in to scan"
+          subtitle="Create an account or sign in to analyze and save your posture."
           onClose={() => setShowSignIn(false)}
           onSignedIn={() => {
             setShowSignIn(false);
@@ -626,16 +633,6 @@ export default function AnalyzePage() {
         />
       )}
 
-      {/* Scanning needs an account: signed-out visitors get the sign-in sheet
-          the moment they open Analyze. Cancelling takes them back. */}
-      {!user && (
-        <SignInModal
-          title="Sign in to start a scan"
-          subtitle="Create an account or sign in to analyze your posture."
-          onClose={() => navigate('/')}
-          onSignedIn={() => {}}
-        />
-      )}
 
       {showCamera && (
         <CameraCapture
