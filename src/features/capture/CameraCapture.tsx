@@ -96,6 +96,25 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facing]);
 
+  // Re-match the feed to the screen shape if the device is rotated, so it keeps
+  // filling the frame without zoom whichever way it's held. Debounced so a drag
+  // resize doesn't thrash the camera.
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout>;
+    const onResize = () => {
+      clearTimeout(t);
+      t = setTimeout(() => startStream(facing), 400);
+    };
+    window.addEventListener('orientationchange', onResize);
+    window.addEventListener('resize', onResize);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('orientationchange', onResize);
+      window.removeEventListener('resize', onResize);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facing]);
+
   // Live low-light check: sample the preview a few times a second and toggle
   // the on-camera bubble, so it appears while it's dark and clears when it isn't.
   useEffect(() => {
