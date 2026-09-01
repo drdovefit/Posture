@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import SyncButton from './components/SyncButton';
-import SignInModal from './components/SignInModal';
 import FeedbackBanner from './components/FeedbackBanner';
 import VerifyEmailGate from './components/VerifyEmailGate';
 import ConsentGate from './components/ConsentGate';
@@ -111,21 +110,9 @@ export default function App() {
     );
   }
 
-  // Signing in is required to use PostureLab.
-  if (!user) {
-    return (
-      <SignInModal
-        mandatory
-        title="Sign in to PostureLab"
-        subtitle="Sign in or create an account to continue."
-        onSignedIn={() => {}}
-        onClose={() => {}}
-      />
-    );
-  }
-
-  // Then the email must be verified.
-  if (!user.emailVerified) {
+  // Signed in but not verified: the verify screen. Signed-out visitors can
+  // browse the app; signing in is required only to scan (see AnalyzePage).
+  if (user && !user.emailVerified) {
     return <VerifyEmailGate email={user.email} />;
   }
 
@@ -212,10 +199,11 @@ export default function App() {
 
       {legalOpen && <LegalDoc doc={legalOpen} onClose={() => setLegalOpen(null)} />}
 
-      {/* Terms/Privacy consent, over a darkened, frozen dashboard. */}
-      {!agreed && (
+      {/* Terms/Privacy consent for signed-in accounts, over a darkened, frozen
+          dashboard. Anonymous visitors browse first and agree when they sign in. */}
+      {user && !agreed && (
         <ConsentGate
-          isUpdate={isLegalUpdate(user?.uid ?? null)}
+          isUpdate={isLegalUpdate(user.uid)}
           loading={checkingLegal}
           onAccept={acceptLegalNow}
         />

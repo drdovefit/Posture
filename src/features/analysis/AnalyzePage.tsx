@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type { Landmarks, ViewType } from '../../lib/types';
 import { analyze } from '../../lib/measure';
 import { detectPose, type RawLandmark } from '../../lib/pose/landmarker';
@@ -67,6 +67,7 @@ interface Shot {
 export default function AnalyzePage() {
   const { activeId } = useActiveClient();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [showSignIn, setShowSignIn] = useState(false);
   const [animalSaveGone, setAnimalSaveGone] = useState(false);
   const pendingSave = useRef(false);
@@ -622,6 +623,17 @@ export default function AnalyzePage() {
             setShowSignIn(false);
             pendingSave.current = true;
           }}
+        />
+      )}
+
+      {/* Scanning needs an account: signed-out visitors get the sign-in sheet
+          the moment they open Analyze. Cancelling takes them back. */}
+      {!user && (
+        <SignInModal
+          title="Sign in to start a scan"
+          subtitle="Create an account or sign in to analyze your posture."
+          onClose={() => navigate('/')}
+          onSignedIn={() => {}}
         />
       )}
 
