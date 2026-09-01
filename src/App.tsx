@@ -5,7 +5,9 @@ import FeedbackBanner from './components/FeedbackBanner';
 import VerifyEmailGate from './components/VerifyEmailGate';
 import ConsentGate from './components/ConsentGate';
 import LegalDoc from './components/LegalDoc';
-import { hasAcceptedLegal } from './legal/consent';
+import { LEGAL_VERSION } from './legal/documents';
+import { hasAcceptedLegal, isLegalUpdate, acceptLegal, cacheAccountLegal } from './legal/consent';
+import { fetchAccountLegalVersion, pushAccountLegalVersion } from './legal/legalSync';
 import { useAuth } from './state/auth';
 import { handleAccountChange } from './lib/accountData';
 import { startAutoSync } from './lib/autosync';
@@ -25,8 +27,46 @@ export default function App() {
   const { user, ready } = useAuth();
   const promptedRef = useRef(false);
   const accountRef = useRef<string | null | undefined>(undefined);
-  const [agreed, setAgreed] = useState(() => hasAcceptedLegal());
+  const [agreed, setAgreed] = useState(() => hasAcceptedLegal(null));
+  const [checkingLegal, setCheckingLegal] = useState(false);
   const [legalOpen, setLegalOpen] = useState<'terms' | 'privacy' | null>(null);
+
+  // Consent is per account, not per device. Re-check whenever the signed-in
+  // account changes: use this identity's local record first, then confirm
+  // against the account's synced record so a different account is re-prompted.
+  useEffect(() => {
+    if (!ready) return;
+    let alive = true;
+    const uid = user?.uid ?? null;
+    const local = hasAcceptedLegal(uid);
+    setAgreed(local);
+    if (uid && !local) {
+      setCheckingLegal(true);
+      fetchAccountLegalVersion(uid)
+        .then((v) => {
+          if (!alive) return;
+          if (v >= LEGAL_VERSION) {
+            cacheAccountLegal(uid, v);
+            setAgreed(true);
+          }
+        })
+        .catch(() => {})
+        .finally(() => alive && setCheckingLegal(false));
+    } else if (uid && local) {
+      // Make sure the account carries what this device already accepted.
+      pushAccountLegalVersion(uid, LEGAL_VERSION).catch(() => {});
+    }
+    return () => {
+      alive = false;
+    };
+  }, [ready, user]);
+
+  function acceptLegalNow() {
+    const uid = user?.uid ?? null;
+    acceptLegal(uid);
+    if (uid) pushAccountLegalVersion(uid, LEGAL_VERSION).catch(() => {});
+    setAgreed(true);
+  }
 
   useEffect(() => {
     startAutoSync();
@@ -61,9 +101,18 @@ export default function App() {
   }, [user, navigate]);
 
   // Everyone must agree to the current Terms & Privacy Policy before using the
-  // app. This also covers the "we updated our terms" re-prompt.
+  // app. This is per account and also covers the "we updated our terms" prompt.
   if (!agreed) {
-    return <ConsentGate onAccept={() => setAgreed(true)} />;
+    if (checkingLegal) {
+      return (
+        <div className="grid min-h-screen place-items-center bg-slate-50 text-sm text-slate-400 dark:bg-slate-950">
+          Loading…
+        </div>
+      );
+    }
+    return (
+      <ConsentGate isUpdate={isLegalUpdate(user?.uid ?? null)} onAccept={acceptLegalNow} />
+    );
   }
 
   if (ready && user && !user.emailVerified) {

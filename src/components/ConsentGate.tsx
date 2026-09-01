@@ -1,21 +1,25 @@
 import { useState } from 'react';
 import LegalDoc from './LegalDoc';
-import { acceptLegal, isLegalUpdate } from '../legal/consent';
 
 /**
  * Blocking screen that asks the user to agree to the Terms of Service and
- * Privacy Policy before using PostureLab. It shows on first use, and again after
- * an update (when LEGAL_VERSION is raised). Agreeing is recorded per version, so
- * it does not keep popping up.
+ * Privacy Policy before using PostureLab. It shows on first use, when a new
+ * account hasn't agreed, and again after an update (when LEGAL_VERSION is
+ * raised). Recording the acceptance is handled by the caller.
  */
-export default function ConsentGate({ onAccept }: { onAccept: () => void }) {
+export default function ConsentGate({
+  isUpdate,
+  onAccept,
+}: {
+  isUpdate: boolean;
+  onAccept: () => void;
+}) {
   const [checked, setChecked] = useState(false);
   const [open, setOpen] = useState<'terms' | 'privacy' | null>(null);
-  const update = isLegalUpdate();
+  const update = isUpdate;
 
   function agree() {
     if (!checked) return;
-    acceptLegal();
     onAccept();
   }
 
