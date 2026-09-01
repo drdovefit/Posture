@@ -9,6 +9,7 @@ import { analyze } from '../../lib/measure';
 import { getSuggestions } from '../../lib/measure/suggestions';
 import MetricList from '../../components/MetricList';
 import ScoreRing from '../../components/ScoreRing';
+import SuggestionItem from '../../components/SuggestionItem';
 import ScoreTrend from './ScoreTrend';
 import type { Assessment, Client } from '../../lib/types';
 import { useState } from 'react';
@@ -149,18 +150,7 @@ function Row({ a, client }: { a: Assessment; client: Client | null }) {
                 <h3 className="mb-2 font-semibold">What to work on</h3>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {suggestions.map((s) => (
-                    <div
-                      key={s.id}
-                      className="rounded-xl border border-slate-200 p-3 dark:border-slate-800"
-                    >
-                      <div className="mb-1 flex items-center gap-2">
-                        <span className="chip bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200">
-                          {s.category}
-                        </span>
-                        <span className="text-sm font-medium">{s.title}</span>
-                      </div>
-                      <p className="text-sm text-slate-500">{s.detail}</p>
-                    </div>
+                    <SuggestionItem key={s.id} s={s} />
                   ))}
                 </div>
               </div>

@@ -5,6 +5,7 @@ import { db } from '../../lib/db';
 import { useActiveClient } from '../../state/useClient';
 import { useAuth } from '../../state/auth';
 import ScoreRing from '../../components/ScoreRing';
+import SuggestionItem from '../../components/SuggestionItem';
 import { useCroppedPortrait } from '../../state/useCroppedPortrait';
 import { analyze } from '../../lib/measure';
 import { getSuggestions } from '../../lib/measure/suggestions';
@@ -178,15 +179,7 @@ export default function DashboardPage() {
               <h2 className="mb-3 text-lg font-semibold">What to work on</h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {focus.slice(0, 3).map((s) => (
-                  <div key={s.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-                    <div className="mb-1 flex items-center gap-2">
-                      <span className="chip bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200">
-                        {s.category}
-                      </span>
-                      <span className="text-sm font-medium">{s.title}</span>
-                    </div>
-                    <p className="text-sm text-slate-500">{s.detail}</p>
-                  </div>
+                  <SuggestionItem key={s.id} s={s} />
                 ))}
               </div>
               <p className="mt-2 text-xs text-slate-400">

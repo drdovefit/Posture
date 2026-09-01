@@ -18,6 +18,7 @@ const CONDITIONS: { id: Condition; label: string }[] = [
   { id: 'hypermobility', label: 'Hypermobility (very flexible)' },
   { id: 'arthritis', label: 'Arthritis' },
   { id: 'spineSurgery', label: 'Past spine surgery' },
+  { id: 'osteoporosis', label: 'Osteoporosis / low bone density' },
 ];
 
 const INJURIES: { id: Injury; label: string }[] = [

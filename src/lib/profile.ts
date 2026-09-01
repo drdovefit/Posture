@@ -11,7 +11,8 @@ export type Condition =
   | 'kyphosis'
   | 'hypermobility'
   | 'arthritis'
-  | 'spineSurgery';
+  | 'spineSurgery'
+  | 'osteoporosis';
 export type Injury =
   | 'legLength'
   | 'hipReplacement'
