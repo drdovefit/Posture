@@ -1,8 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../state/auth';
 import Submissions from '../../components/Submissions';
+import SignInModal from '../../components/SignInModal';
 import { submitFeedback, isOwnerEmail, type FeedbackType } from '../../lib/feedback';
+
+const DRAFT_KEY = 'posturelab-feedback-draft';
+
+function loadDraft(): { type: FeedbackType; text: string } {
+  try {
+    const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}');
+    return {
+      type: d.type === 'feature' ? 'feature' : 'bug',
+      text: typeof d.text === 'string' ? d.text : '',
+    };
+  } catch {
+    return { type: 'bug', text: '' };
+  }
+}
 
 function Chip({
   active,
@@ -33,14 +48,32 @@ export default function SettingsPage() {
   const isOwner = isOwnerEmail(user?.email);
 
   // --- Feedback --------------------------------------------------------------
-  const [type, setType] = useState<FeedbackType>('bug');
-  const [text, setText] = useState('');
+  const initialDraft = loadDraft();
+  const [type, setType] = useState<FeedbackType>(initialDraft.type);
+  const [text, setText] = useState(initialDraft.text);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [statusOk, setStatusOk] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false);
+
+  // Keep the draft so it survives signing in (which may bounce through the
+  // profile setup) and page reloads — it's waiting when they come back.
+  useEffect(() => {
+    try {
+      if (text.trim()) localStorage.setItem(DRAFT_KEY, JSON.stringify({ type, text }));
+      else localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* storage unavailable */
+    }
+  }, [type, text]);
 
   async function send() {
     if (!text.trim()) return;
+    // Sending requires an account so we can reach you when it's resolved.
+    if (!user) {
+      setShowSignIn(true);
+      return;
+    }
     setBusy(true);
     setStatus('');
     try {
@@ -48,6 +81,11 @@ export default function SettingsPage() {
       setStatusOk(true);
       setStatus('Thanks. Your note was sent.');
       setText('');
+      try {
+        localStorage.removeItem(DRAFT_KEY);
+      } catch {
+        /* ignore */
+      }
     } catch {
       setStatusOk(false);
       setStatus('Could not send right now. Please try again.');
@@ -99,8 +137,19 @@ export default function SettingsPage() {
           }
         />
         <button className="btn-primary w-full" onClick={send} disabled={busy || !text.trim()}>
-          {busy ? 'Sending…' : 'Send'}
+          {busy
+            ? 'Sending…'
+            : user
+              ? type === 'bug'
+                ? 'Report'
+                : 'Request'
+              : 'Log in to send'}
         </button>
+        {!user && text.trim() && (
+          <p className="text-xs text-slate-400">
+            Log in to send this. Your note stays here, ready to go.
+          </p>
+        )}
         {status && (
           <p
             className={`rounded-lg border p-2 text-sm font-medium ${
@@ -113,6 +162,15 @@ export default function SettingsPage() {
           </p>
         )}
       </div>
+
+      {showSignIn && (
+        <SignInModal
+          title="Log in to send"
+          subtitle="Sign in so we can let you know once it's handled."
+          onSignedIn={() => setShowSignIn(false)}
+          onClose={() => setShowSignIn(false)}
+        />
+      )}
 
       {isOwner && <Submissions />}
 
