@@ -120,7 +120,7 @@ export async function renderAnnotated(
   } else if (hasQr || hasWm) {
     // Full: QR + wordmark on one white rounded card, bottom-right. Compact so
     // it labels the photo without dominating it.
-    const contentW = W * 0.1605; // ~7% larger QR + wordmark than before
+    const contentW = W * 0.15;
     const pad = contentW * 0.1;
     const gap = contentW * 0.07;
     const qrH = hasQr ? contentW : 0;
