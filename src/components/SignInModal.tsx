@@ -31,13 +31,16 @@ interface Props {
   /** Called after a successful sign-in / sign-up. */
   onSignedIn: () => void;
   onClose: () => void;
+  /** When true this is a required gate: no close button, no backdrop dismiss. */
+  mandatory?: boolean;
 }
 
 /**
- * A focused sign-in sheet (Google + email/password) used wherever an action
- * needs an account first — e.g. saving an assessment to the cloud.
+ * A focused sign-in sheet (Google + email/password) used wherever an account
+ * is needed — either as an optional prompt or, with `mandatory`, as the gate
+ * that must be passed before using the app.
  */
-export default function SignInModal({ title, subtitle, onSignedIn, onClose }: Props) {
+export default function SignInModal({ title, subtitle, onSignedIn, onClose, mandatory }: Props) {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [statusOk, setStatusOk] = useState(false);
@@ -129,18 +132,23 @@ export default function SignInModal({ title, subtitle, onSignedIn, onClose }: Pr
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[60] grid place-items-center bg-black/70 p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[60] grid place-items-center bg-black/70 p-4"
+      onClick={mandatory ? undefined : onClose}
+    >
       <div
         className="card relative w-full max-w-sm space-y-4 p-6 text-center"
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
-        >
-          ✕
-        </button>
+        {!mandatory && (
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+          >
+            ✕
+          </button>
+        )}
         <img
           src={`${import.meta.env.BASE_URL}brand/logo-mark.png`}
           alt="PostureLab"

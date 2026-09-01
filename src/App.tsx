@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import SyncButton from './components/SyncButton';
+import SignInModal from './components/SignInModal';
 import FeedbackBanner from './components/FeedbackBanner';
 import VerifyEmailGate from './components/VerifyEmailGate';
 import ConsentGate from './components/ConsentGate';
@@ -73,49 +74,58 @@ export default function App() {
   }, []);
 
   // Tie local data to the signed-in account: wipe and re-pull when the account
-  // changes or signs out, so one account never sees another's data here.
+  // changes or signs out, so one account never sees another's data here. After
+  // the account's data (including the saved profile) is synced, send only a
+  // brand-new user — one with no saved "About you" — to the profile setup;
+  // everyone else lands on the dashboard.
   useEffect(() => {
     if (!ready) return;
     const uid = user?.uid ?? null;
     if (accountRef.current === uid) return;
     accountRef.current = uid;
-    handleAccountChange(uid);
-  }, [ready, user]);
+    let alive = true;
+    (async () => {
+      await handleAccountChange(uid);
+      if (!alive || !uid || promptedRef.current) return;
+      promptedRef.current = true;
+      let done = false;
+      try {
+        done = !!localStorage.getItem('posturelab-profile-done');
+      } catch {
+        done = false;
+      }
+      if (!done) navigate('/profile');
+    })();
+    if (!uid) promptedRef.current = false;
+    return () => {
+      alive = false;
+    };
+  }, [ready, user, navigate]);
 
-  // First time someone signs in, open the profile setup once. After they save
-  // it (posturelab-profile-done), it only shows from the account menu.
-  useEffect(() => {
-    if (!user) {
-      promptedRef.current = false;
-      return;
-    }
-    if (promptedRef.current) return;
-    promptedRef.current = true;
-    let done = false;
-    try {
-      done = !!localStorage.getItem('posturelab-profile-done');
-    } catch {
-      done = false;
-    }
-    if (!done) navigate('/profile');
-  }, [user, navigate]);
-
-  // Everyone must agree to the current Terms & Privacy Policy before using the
-  // app. This is per account and also covers the "we updated our terms" prompt.
-  if (!agreed) {
-    if (checkingLegal) {
-      return (
-        <div className="grid min-h-screen place-items-center bg-slate-50 text-sm text-slate-400 dark:bg-slate-950">
-          Loading…
-        </div>
-      );
-    }
+  // Still checking who's signed in.
+  if (!ready) {
     return (
-      <ConsentGate isUpdate={isLegalUpdate(user?.uid ?? null)} onAccept={acceptLegalNow} />
+      <div className="grid min-h-screen place-items-center bg-slate-50 text-sm text-slate-400 dark:bg-slate-950">
+        Loading…
+      </div>
     );
   }
 
-  if (ready && user && !user.emailVerified) {
+  // Signing in is required to use PostureLab.
+  if (!user) {
+    return (
+      <SignInModal
+        mandatory
+        title="Sign in to PostureLab"
+        subtitle="Sign in or create an account to continue."
+        onSignedIn={() => {}}
+        onClose={() => {}}
+      />
+    );
+  }
+
+  // Then the email must be verified.
+  if (!user.emailVerified) {
     return <VerifyEmailGate email={user.email} />;
   }
 
@@ -201,6 +211,15 @@ export default function App() {
       </footer>
 
       {legalOpen && <LegalDoc doc={legalOpen} onClose={() => setLegalOpen(null)} />}
+
+      {/* Terms/Privacy consent, over a darkened, frozen dashboard. */}
+      {!agreed && (
+        <ConsentGate
+          isUpdate={isLegalUpdate(user?.uid ?? null)}
+          loading={checkingLegal}
+          onAccept={acceptLegalNow}
+        />
+      )}
     </div>
   );
 }
