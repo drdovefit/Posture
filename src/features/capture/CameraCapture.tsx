@@ -65,14 +65,20 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
       };
       const stream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
       streamRef.current = stream;
-      // Widen to the sensor's minimum zoom (least zoomed-in) where the device
-      // exposes zoom control, to counter the fill-crop looking zoomed in.
+      // Lock to the standard 1x lens where the device exposes zoom control, so
+      // a phone with an ultra-wide doesn't open at 0.5x. Clamp 1 into the
+      // supported range in case a camera's minimum is above or below it.
       try {
         const track = stream.getVideoTracks()[0];
-        const caps = (track?.getCapabilities?.() ?? {}) as { zoom?: { min?: number } };
+        const caps = (track?.getCapabilities?.() ?? {}) as {
+          zoom?: { min?: number; max?: number };
+        };
         if (track && caps.zoom && typeof caps.zoom.min === 'number') {
+          const min = caps.zoom.min;
+          const max = typeof caps.zoom.max === 'number' ? caps.zoom.max : 1;
+          const target = Math.min(Math.max(1, min), max);
           await track.applyConstraints({
-            advanced: [{ zoom: caps.zoom.min }],
+            advanced: [{ zoom: target }],
           } as unknown as MediaTrackConstraints);
         }
       } catch {
