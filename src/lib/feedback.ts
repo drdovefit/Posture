@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDocs,
   orderBy,
@@ -123,6 +124,17 @@ export async function markDone(id: string, type: FeedbackType): Promise<void> {
     status: 'done',
     resolvedMessage: randomDoneMessage(type),
     resolvedAt: Date.now(),
+  });
+}
+
+/** Owner: undo a done item — send it back to the To-do list and pull the
+ *  submitter's thank-you banner (works even if they haven't seen it yet). */
+export async function reopenFeedback(id: string): Promise<void> {
+  await updateDoc(doc(col(), id), {
+    status: 'open',
+    resolvedMessage: deleteField(),
+    resolvedAt: deleteField(),
+    dismissedByUser: false,
   });
 }
 

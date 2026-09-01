@@ -214,7 +214,6 @@ export default function SyncButton() {
                 >
                   About you
                 </button>
-                <p className="text-xs text-slate-400">Your data syncs automatically.</p>
                 <button
                   className="btn-ghost w-full"
                   onClick={async () => {

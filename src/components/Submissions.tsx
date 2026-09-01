@@ -3,6 +3,7 @@ import {
   loadFeedback,
   setHeld,
   markDone,
+  reopenFeedback,
   removeFeedback,
   removeAllFeedback,
   type FeedbackItem,
@@ -33,6 +34,7 @@ export default function Submissions() {
   const [filter, setFilter] = useState<'all' | FeedbackType>('all');
   const [confirmAll, setConfirmAll] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
   async function refresh() {
     setLoading(true);
@@ -50,11 +52,17 @@ export default function Submissions() {
 
   async function act(id: string, fn: () => Promise<void>) {
     setBusyId(id);
+    setError('');
     try {
       await fn();
       await refresh();
-    } catch {
-      /* ignore, list stays */
+    } catch (e) {
+      const code = (e as { code?: string })?.code ?? '';
+      setError(
+        code.includes('permission')
+          ? "That didn't save — Firestore rejected it. Publish the updated security rules (firestore.rules) in the Firebase console, then try again."
+          : "That didn't save. Check your connection and try again.",
+      );
     } finally {
       setBusyId(null);
     }
@@ -102,6 +110,12 @@ export default function Submissions() {
           History
         </button>
       </div>
+
+      {error && (
+        <p className="rounded-lg border border-red-200 bg-red-50 p-2 text-sm font-medium text-red-700">
+          {error}
+        </p>
+      )}
 
       {view === 'active' && (
         <>
@@ -207,6 +221,16 @@ export default function Submissions() {
                   {it.email && <span className="truncate">· {it.email}</span>}
                 </div>
                 <p className="whitespace-pre-wrap text-sm">{it.text}</p>
+                <div className="mt-2">
+                  <button
+                    className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+                    title="Send back to To do and remove the submitter's message"
+                    disabled={busyId === it.id}
+                    onClick={() => act(it.id, () => reopenFeedback(it.id))}
+                  >
+                    ↩ Undo
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
