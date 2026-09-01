@@ -9,6 +9,7 @@ import {
   type Sex,
   type Pregnancy,
 } from '../../lib/profile';
+import { pushProfile } from '../../lib/profileSync';
 import { rescoreAll } from '../../lib/rescore';
 
 const CONDITIONS: { id: Condition; label: string }[] = [
@@ -164,6 +165,9 @@ export default function ProfilePage() {
     } catch {
       /* ignore */
     }
+    // Back the profile up to the account so it survives sign-out and follows
+    // the user to their other devices.
+    void pushProfile().catch(() => {});
     setDirty(false);
     setSavedOnce(true);
   }
@@ -183,6 +187,7 @@ export default function ProfilePage() {
 
   async function reset() {
     setProfile({});
+    void pushProfile().catch(() => {}); // clear it on the account too
     setSex('unspecified');
     setBirthday('');
     setFt('');

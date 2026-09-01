@@ -35,6 +35,7 @@ export interface Profile {
 }
 
 const KEY = 'posturelab-profile';
+const TS_KEY = 'posturelab-profile-at';
 
 function load(): Profile {
   try {
@@ -50,13 +51,40 @@ export function getProfile(): Profile {
   return current;
 }
 
+/** When the local profile was last edited (ms), for last-write-wins sync. */
+export function getProfileUpdatedAt(): number {
+  try {
+    return Number(localStorage.getItem(TS_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+}
+
 export function setProfile(p: Profile): void {
   current = p;
   try {
     localStorage.setItem(KEY, JSON.stringify(p));
+    localStorage.setItem(TS_KEY, String(Date.now()));
   } catch {
     /* storage unavailable */
   }
+}
+
+/** Apply a profile pulled from the cloud without treating it as a fresh edit. */
+export function setProfileFromCloud(p: Profile, updatedAt: number): void {
+  current = p;
+  try {
+    localStorage.setItem(KEY, JSON.stringify(p));
+    localStorage.setItem(TS_KEY, String(updatedAt || Date.now()));
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+export function isProfileEmpty(p: Profile): boolean {
+  return Object.values(p).every(
+    (v) => v == null || (Array.isArray(v) && v.length === 0),
+  );
 }
 
 /** Current age, derived from birthday (so it updates itself), else legacy age. */

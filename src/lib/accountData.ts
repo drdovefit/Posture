@@ -1,5 +1,6 @@
 import { db } from './db';
 import { syncAll } from './sync';
+import { syncProfile } from './profileSync';
 
 const OWNER_KEY = 'posturelab-owner';
 
@@ -9,6 +10,11 @@ async function wipeLocal(): Promise<void> {
   try {
     localStorage.removeItem('posturelab-tombstones');
     localStorage.removeItem('posturelab-active-client');
+    // The profile belongs to the account too, so it should not linger between
+    // accounts; the correct one is pulled back from the cloud on sign-in.
+    localStorage.removeItem('posturelab-profile');
+    localStorage.removeItem('posturelab-profile-at');
+    localStorage.removeItem('posturelab-profile-done');
   } catch {
     /* storage unavailable */
   }
@@ -42,6 +48,13 @@ export async function handleAccountChange(uid: string | null): Promise<void> {
       await syncAll(uid);
     } catch {
       /* offline or rules not ready; will retry on next sign-in/sync */
+    }
+    try {
+      const hasProfile = await syncProfile(uid);
+      // If a saved profile came down, don't force the first-run setup screen.
+      if (hasProfile) localStorage.setItem('posturelab-profile-done', '1');
+    } catch {
+      /* offline; profile stays local and syncs next time */
     }
   } else if (owner) {
     // A real account signed out: clear its data so the next person can't see it.
