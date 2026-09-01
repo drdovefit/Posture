@@ -177,7 +177,7 @@ export default function SettingsPage() {
       <div className="card p-5">
         <h2 className="mb-1 font-semibold">About</h2>
         <p className="text-sm text-slate-500">
-          PostureLab is an educational tool, not medical advice. New to it?{' '}
+          New to PostureLab?{' '}
           <Link to="/guide" className="text-brand-600 hover:underline">
             See the guide
           </Link>

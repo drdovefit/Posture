@@ -1,8 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import SyncButton from './components/SyncButton';
 import FeedbackBanner from './components/FeedbackBanner';
 import VerifyEmailGate from './components/VerifyEmailGate';
+import ConsentGate from './components/ConsentGate';
+import LegalDoc from './components/LegalDoc';
+import { hasAcceptedLegal } from './legal/consent';
 import { useAuth } from './state/auth';
 import { handleAccountChange } from './lib/accountData';
 import { startAutoSync } from './lib/autosync';
@@ -22,6 +25,8 @@ export default function App() {
   const { user, ready } = useAuth();
   const promptedRef = useRef(false);
   const accountRef = useRef<string | null | undefined>(undefined);
+  const [agreed, setAgreed] = useState(() => hasAcceptedLegal());
+  const [legalOpen, setLegalOpen] = useState<'terms' | 'privacy' | null>(null);
 
   useEffect(() => {
     startAutoSync();
@@ -54,6 +59,12 @@ export default function App() {
     }
     if (!done) navigate('/profile');
   }, [user, navigate]);
+
+  // Everyone must agree to the current Terms & Privacy Policy before using the
+  // app. This also covers the "we updated our terms" re-prompt.
+  if (!agreed) {
+    return <ConsentGate onAccept={() => setAgreed(true)} />;
+  }
 
   if (ready && user && !user.emailVerified) {
     return <VerifyEmailGate email={user.email} />;
@@ -129,10 +140,18 @@ export default function App() {
       </main>
 
       <footer className="border-t border-slate-200 px-4 py-4 text-center text-xs text-slate-400 dark:border-slate-800">
-        PostureLab is an educational tool, not medical advice.
+        <button onClick={() => setLegalOpen('terms')} className="hover:text-brand-600 hover:underline">
+          Terms of Service
+        </button>
+        <span className="mx-1">·</span>
+        <button onClick={() => setLegalOpen('privacy')} className="hover:text-brand-600 hover:underline">
+          Privacy Policy
+        </button>
         <span className="mx-1">·</span>
         <span title="App version">Version {__APP_VERSION__}</span>
       </footer>
+
+      {legalOpen && <LegalDoc doc={legalOpen} onClose={() => setLegalOpen(null)} />}
     </div>
   );
 }

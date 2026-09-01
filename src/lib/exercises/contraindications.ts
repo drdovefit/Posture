@@ -165,7 +165,7 @@ export function screenExercise(id: string, title: string, p: Profile): ScreenRes
       ? `Because you told us about ${list}, we’ve hidden “${title}.”`
       : `Because you told us about ${list}, take “${title}” carefully.`;
 
-  const message = `${lead} ${rule.reason} Instead, do ${rule.alt}. Check with your doctor or physio before starting, and stop if it hurts.`;
+  const message = `${lead} ${rule.reason} Instead, do ${rule.alt}.`;
 
   return { status, flags, message };
 }
