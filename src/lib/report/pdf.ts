@@ -66,7 +66,7 @@ export async function exportAssessmentPdf(client: Client, a: Assessment) {
   doc.rect(0, 0, pageW, headerH, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
+  doc.setFontSize(22.7);
   doc.text('PostureLab Report', margin, 52);
   if (qrData) {
     const qrSize = 70;
@@ -108,7 +108,9 @@ export async function exportAssessmentPdf(client: Client, a: Assessment) {
     });
     dataUrl = await blobToDataUrl(rendered);
   } catch {
-    dataUrl = await blobToDataUrl(a.annotated ?? a.photo);
+    // Fall back to the plain photo, never the saved annotated one: older saves
+    // baked a QR into it, and the report already carries the QR in its header.
+    dataUrl = await blobToDataUrl(a.photo);
   }
   const imgW = 200;
   const ratio = a.imageHeight / a.imageWidth || 1.4;

@@ -104,7 +104,7 @@ export async function renderAnnotated(
     // Minimal: just a small wordmark, bottom-left, for the saved image the
     // report uses (the QR sits in the report's blue header instead).
     if (hasWm) {
-      const wmW = W * 0.16;
+      const wmW = W * 0.165;
       const wmH = (wordmark!.naturalHeight / wordmark!.naturalWidth) * wmW;
       const pad = wmW * 0.12;
       const x0 = margin + pad;

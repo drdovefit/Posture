@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../lib/db';
@@ -66,6 +66,19 @@ export default function DashboardPage() {
     [],
   );
 
+  // Once someone has a scan they're no longer new: hide the tip and mark it
+  // seen so it never returns, even if they later delete every scan.
+  useEffect(() => {
+    if (assessments.length > 0) {
+      try {
+        localStorage.setItem('posturelab-guide-seen', '1');
+      } catch {
+        /* ignore */
+      }
+      setShowGuideTip(false);
+    }
+  }, [assessments.length]);
+
   const latest = assessments?.[0];
   const focus = latest ? getSuggestions(analyze(latest.view, latest.landmarks).suggestionIds) : [];
   const avg =
@@ -82,7 +95,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {showGuideTip && (
+      {showGuideTip && !assessments.length && (
         <div className="card flex items-center gap-3 border-brand-200 bg-brand-50 p-4 dark:border-brand-900/40 dark:bg-brand-900/20">
           <div className="flex-1 text-sm">
             <span className="font-semibold">New here?</span> Take a look at the guide for the best results.

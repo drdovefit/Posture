@@ -27,6 +27,7 @@ function Row({ a, client }: { a: Assessment; client: Client | null }) {
   const url = useBlobUrl(a.annotated ?? a.photo); // full image, for the download link
   const thumb = useCroppedPortrait(a); // cropped to the body, for the thumbnail
   const [open, setOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   return (
     <div className="card overflow-hidden">
       <div className="flex gap-4 p-4">
@@ -87,7 +88,7 @@ function Row({ a, client }: { a: Assessment; client: Client | null }) {
             </a>
             <button
               className="btn-ghost !py-1 text-xs !text-red-600"
-              onClick={() => a.id && confirm('Delete this assessment?') && deleteAssessment(a.id)}
+              onClick={() => setConfirmDelete(true)}
             >
               Delete
             </button>
@@ -97,6 +98,46 @@ function Row({ a, client }: { a: Assessment; client: Client | null }) {
           <ScoreRing score={a.score} size={72} label="" />
         </div>
       </div>
+
+      {confirmDelete && (
+        <div
+          className="fixed inset-0 z-[60] grid place-items-center bg-black/70 p-4"
+          onClick={() => setConfirmDelete(false)}
+        >
+          <div
+            className="card w-full max-w-xs space-y-4 p-6 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-bold">Delete this scan?</h3>
+            <div className="mx-auto h-40 w-32 overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800">
+              {thumb && <img src={thumb} alt="" className="h-full w-full object-cover" />}
+            </div>
+            <p className="text-sm text-slate-500">
+              {VIEW_LABEL[a.view]} view ·{' '}
+              {new Date(a.createdAt).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })}
+            </p>
+            <p className="text-xs text-slate-400">This can't be undone.</p>
+            <div className="flex gap-2">
+              <button className="btn-ghost flex-1" onClick={() => setConfirmDelete(false)}>
+                Cancel
+              </button>
+              <button
+                className="flex-1 rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600"
+                onClick={() => {
+                  if (a.id) deleteAssessment(a.id);
+                  setConfirmDelete(false);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {open && (
         <div className="space-y-4 border-t border-slate-100 p-4 dark:border-slate-800">
           <MetricList metrics={a.metrics} />
