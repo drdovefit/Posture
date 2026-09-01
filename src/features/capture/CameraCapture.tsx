@@ -53,9 +53,14 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
   async function startStream(f: Facing) {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     try {
+      // Ask the camera for a feed shaped like the screen, so it fills the frame
+      // with no crop and no zoom. width/height are hints for resolution; the
+      // aspectRatio is what makes it match the screen (portrait on a phone).
+      const screenAR = window.innerWidth / window.innerHeight;
       const video: MediaTrackConstraints = {
         facingMode: f,
-        width: { ideal: 1080 },
+        aspectRatio: { ideal: screenAR },
+        width: { ideal: 1920 },
         height: { ideal: 1920 },
       };
       const stream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
@@ -142,36 +147,19 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
   }, []);
 
   function grabFrame(el: HTMLVideoElement, maxW = 1400): Promise<Blob> {
-    // Match what the preview shows: the video fills the screen (object-cover),
-    // cropping the edges to the on-screen shape, the way the phone camera does.
-    // Capture that same centre crop so the saved photo equals the preview.
+    // No zoom: capture the whole camera frame exactly as the preview shows it.
     const vw = el.videoWidth || 1080;
     const vh = el.videoHeight || 1920;
-    const dispW = el.clientWidth || vw;
-    const dispH = el.clientHeight || vh;
-    const targetAR = dispW / dispH;
-    const srcAR = vw / vh;
-    let sw = vw;
-    let sh = vh;
-    let sx = 0;
-    let sy = 0;
-    if (srcAR > targetAR) {
-      sw = Math.round(vh * targetAR);
-      sx = Math.round((vw - sw) / 2);
-    } else {
-      sh = Math.round(vw / targetAR);
-      sy = Math.round((vh - sh) / 2);
-    }
-    const scale = Math.min(1, maxW / sw);
+    const scale = Math.min(1, maxW / vw);
     const canvas = document.createElement('canvas');
-    canvas.width = Math.round(sw * scale);
-    canvas.height = Math.round(sh * scale);
+    canvas.width = Math.round(vw * scale);
+    canvas.height = Math.round(vh * scale);
     const ctx = canvas.getContext('2d')!;
     if (facing === 'user') {
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
     }
-    ctx.drawImage(el, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(el, 0, 0, canvas.width, canvas.height);
     return new Promise((res) => canvas.toBlob((b) => res(b!), 'image/jpeg', 0.9));
   }
 
@@ -213,7 +201,7 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
               ref={videoRef}
               playsInline
               muted
-              className="h-full w-full object-cover"
+              className="h-full w-full object-contain"
               style={{ transform: previewTransform, transformOrigin: 'center' }}
             />
 
