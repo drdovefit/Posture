@@ -4,7 +4,7 @@ import type { Landmarks, ViewType } from '../../lib/types';
 import { analyze } from '../../lib/measure';
 import { detectPose, type RawLandmark } from '../../lib/pose/landmarker';
 import { defaultLandmarks, mapLandmarks } from '../../lib/pose/mapping';
-import { photoWarnings } from '../../lib/pose/photoQuality';
+import { photoWarnings, torsoVisibility } from '../../lib/pose/photoQuality';
 import { classifyAnimal } from '../../lib/pose/animalDetect';
 
 /** Average detector confidence across the main body joints (0..1). */
@@ -18,6 +18,17 @@ function detectionConfidence(raw: RawLandmark[]): number {
 function shoulderSeparation(raw: RawLandmark[]): number | undefined {
   if (!raw[11] || !raw[12]) return undefined;
   return Math.abs(raw[11].x - raw[12].x);
+}
+
+/** How clearly the torso joints (shoulders + hips) show — low when baggy
+ *  clothing or a busy background hides them. 0..1. */
+function torsoVis(raw: RawLandmark[]): number {
+  return torsoVisibility({
+    shoulderL: raw[11]?.visibility,
+    shoulderR: raw[12]?.visibility,
+    hipL: raw[23]?.visibility,
+    hipR: raw[24]?.visibility,
+  });
 }
 import { renderAnnotated } from '../../lib/report/renderAnnotated';
 import { getSuggestions } from '../../lib/measure/suggestions';
@@ -130,6 +141,7 @@ export default function AnalyzePage() {
           ? photoWarnings(img, landmarks, forView, {
               confidence: detectionConfidence(raw),
               shoulderSep: shoulderSeparation(raw),
+              jointVisibility: torsoVis(raw),
             })
           : [],
       });
@@ -198,6 +210,7 @@ export default function AnalyzePage() {
           ? photoWarnings(s.imgEl, landmarks, view, {
               confidence: detectionConfidence(raw),
               shoulderSep: shoulderSeparation(raw),
+              jointVisibility: torsoVis(raw),
             })
           : photoWarnings(s.imgEl, landmarks, view),
       });

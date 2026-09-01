@@ -67,7 +67,7 @@ export function photoWarnings(
   img: HTMLImageElement,
   lm: Landmarks,
   view: ViewType,
-  opts: { confidence?: number; shoulderSep?: number } = {},
+  opts: { confidence?: number; shoulderSep?: number; jointVisibility?: number } = {},
 ): string[] {
   const warns: string[] = [];
 
@@ -108,10 +108,39 @@ export function photoWarnings(
     }
   }
 
+  // Shoulders and hips hard to make out — usually baggy clothing hiding the
+  // joints (or a busy background). Only when the body is otherwise well framed,
+  // so it doesn't fire just because someone is far away.
+  if (
+    opts.jointVisibility != null &&
+    opts.jointVisibility < 0.6 &&
+    span != null &&
+    span >= 0.45
+  ) {
+    warns.push(
+      "We can't clearly make out your shoulders and hips. Wear fitted clothing — baggy clothes hide the joints — against a plain wall for a better reading.",
+    );
+  }
+
   // The detector itself is unsure about the joints.
   if (opts.confidence != null && opts.confidence < 0.5) {
     warns.push('The detected points look uncertain. Check them before you save.');
   }
 
   return warns;
+}
+
+/** Average visibility of the torso joints (shoulders + hips): a proxy for
+ *  whether clothing or background is hiding them. 0..1. */
+export function torsoVisibility(vis: {
+  shoulderL?: number;
+  shoulderR?: number;
+  hipL?: number;
+  hipR?: number;
+}): number {
+  const vals = [vis.shoulderL, vis.shoulderR, vis.hipL, vis.hipR].filter(
+    (n): n is number => n != null,
+  );
+  if (!vals.length) return 1;
+  return vals.reduce((s, v) => s + v, 0) / vals.length;
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ViewType } from '../../lib/types';
-import { imageBrightness, framingHint } from '../../lib/pose/photoQuality';
+import { imageBrightness, framingHint, torsoVisibility } from '../../lib/pose/photoQuality';
 import { detectPoseSource } from '../../lib/pose/landmarker';
 import { mapLandmarks } from '../../lib/pose/mapping';
 
@@ -155,7 +155,20 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
         }
         const lm = mapLandmarks(raw, view);
         const sep = raw[11] && raw[12] ? Math.abs(raw[11].x - raw[12].x) : undefined;
-        setFrameTip(framingHint(lm, view, sep));
+        const hint = framingHint(lm, view, sep);
+        if (hint) {
+          setFrameTip(hint); // fix framing first
+        } else {
+          // Framing is fine; if the torso joints are hard to see it's usually
+          // baggy clothing hiding the shoulders/hips.
+          const tv = torsoVisibility({
+            shoulderL: raw[11]?.visibility,
+            shoulderR: raw[12]?.visibility,
+            hipL: raw[23]?.visibility,
+            hipR: raw[24]?.visibility,
+          });
+          setFrameTip(tv < 0.5 ? 'Wear fitted clothing so your joints show' : null);
+        }
       } catch {
         /* detector not ready; ignore this tick */
       } finally {
@@ -193,9 +206,15 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
   async function shootNow() {
     const el = videoRef.current;
     if (!el) return;
-    // Grab the frame at this instant, flash the shutter green for a second so
-    // the capture is unmistakable, then hand the photo off.
+    // Grab the frame, then freeze the preview on that exact frame so the green
+    // flash sits over a still image — nothing moves behind it — and only then
+    // flash green and hand the photo off.
     const blob = await grabFrame(el);
+    try {
+      el.pause();
+    } catch {
+      /* pause not available; harmless */
+    }
     setCountdown(0);
     setCountBig(false);
     setShutterState('flash');
