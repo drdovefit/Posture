@@ -97,6 +97,18 @@ export async function doSignOut() {
   await signOut(auth);
 }
 
+/** Re-send the verification link to the current user. */
+export async function resendVerification(): Promise<void> {
+  if (auth.currentUser) await sendEmailVerification(auth.currentUser);
+}
+
+/** Refresh the user from the server and return whether the email is verified now. */
+export async function reloadUser(): Promise<boolean> {
+  if (!auth.currentUser) return false;
+  await auth.currentUser.reload();
+  return auth.currentUser.emailVerified;
+}
+
 /** Update the signed-in user's display name. */
 export async function updateDisplayName(name: string) {
   if (!auth.currentUser) return;
