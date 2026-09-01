@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ViewType } from '../../lib/types';
+import { getProfile } from '../../lib/profile';
 
 const HIDE_KEY = 'posturelab-dotguide-hidden';
 const GENDER_KEY = 'posturelab-gender';
@@ -10,6 +11,12 @@ export function dotGuideHidden() {
 }
 
 type Gender = 'female' | 'male';
+
+/** The gender from the user's profile, if they set it to male or female. */
+function profileGender(): Gender | null {
+  const s = getProfile().sex;
+  return s === 'male' || s === 'female' ? s : null;
+}
 
 interface Placement {
   slug: string;
@@ -46,7 +53,7 @@ export default function DotGuide({ view, open, onClose }: Props) {
   const [brokenSrc, setBrokenSrc] = useState('');
   const [dontShow, setDontShow] = useState(false);
   const [gender, setGender] = useState<Gender>(
-    () => (localStorage.getItem(GENDER_KEY) as Gender) || 'female',
+    () => profileGender() || (localStorage.getItem(GENDER_KEY) as Gender) || 'female',
   );
   // Which view the guide is showing — starts from the analyze view but can be
   // switched inside the guide.
@@ -54,7 +61,12 @@ export default function DotGuide({ view, open, onClose }: Props) {
     view === 'anterior' ? 'anterior' : 'lateral',
   );
   useEffect(() => {
-    if (open) setLocalView(view === 'anterior' ? 'anterior' : 'lateral');
+    if (open) {
+      setLocalView(view === 'anterior' ? 'anterior' : 'lateral');
+      // Default to the gender set in the profile whenever the guide opens.
+      const g = profileGender();
+      if (g) setGender(g);
+    }
   }, [open, view]);
 
   if (!open) return null;

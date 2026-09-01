@@ -11,6 +11,8 @@ import {
 } from 'recharts';
 import { addPain, db, deletePain, deletePainMany } from '../../lib/db';
 import { useActiveClient } from '../../state/useClient';
+import { useAuth } from '../../state/auth';
+import SignInModal from '../../components/SignInModal';
 
 const NOTES_MAX = 399;
 
@@ -60,6 +62,8 @@ export default function PainPage() {
     [],
   );
 
+  const { user } = useAuth();
+  const [showSignIn, setShowSignIn] = useState(false);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [region, setRegion] = useState(REGIONS[0]);
   const [customRegion, setCustomRegion] = useState('');
@@ -129,6 +133,10 @@ export default function PainPage() {
   }, []);
 
   async function add() {
+    if (!user) {
+      setShowSignIn(true);
+      return;
+    }
     if (activeId == null) return;
     const finalRegion =
       region === 'Other' ? customRegion.trim() || 'Other' : region;
@@ -248,7 +256,7 @@ export default function PainPage() {
             placeholder="e.g. worse after sitting all day"
           />
         </label>
-        <button className="btn-primary w-full" onClick={add} disabled={activeId == null}>
+        <button className="btn-primary w-full" onClick={add} disabled={!!user && activeId == null}>
           Add entry
         </button>
       </div>
@@ -372,6 +380,15 @@ export default function PainPage() {
           </>
         )}
       </div>
+
+      {showSignIn && (
+        <SignInModal
+          title="Sign in to log pain"
+          subtitle="Create an account or sign in to save your pain diary."
+          onClose={() => setShowSignIn(false)}
+          onSignedIn={() => setShowSignIn(false)}
+        />
+      )}
     </div>
   );
 }
