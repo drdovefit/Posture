@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import type { Assessment, Client, PainEntry } from './types';
 import { addTombstone } from './tombstones';
+import { scheduleSync } from './autosync';
 
 /**
  * Local-first storage. Everything (photos included, as Blobs) lives in the
@@ -39,7 +40,9 @@ export async function ensureDefaultClient(): Promise<number> {
 // --- Assessment helpers ------------------------------------------------------
 
 export async function saveAssessment(a: Omit<Assessment, 'id'>) {
-  return db.assessments.add(a as Assessment);
+  const id = await db.assessments.add(a as Assessment);
+  scheduleSync();
+  return id;
 }
 
 export async function assessmentsForClient(clientId: number) {
@@ -49,13 +52,16 @@ export async function assessmentsForClient(clientId: number) {
 export async function deleteAssessment(id: number) {
   const rec = await db.assessments.get(id);
   if (rec?.cid) addTombstone('assessments', rec.cid);
-  return db.assessments.delete(id);
+  await db.assessments.delete(id);
+  scheduleSync();
 }
 
 // --- Pain helpers ------------------------------------------------------------
 
 export async function addPain(entry: Omit<PainEntry, 'id'>) {
-  return db.pain.add(entry as PainEntry);
+  const id = await db.pain.add(entry as PainEntry);
+  scheduleSync();
+  return id;
 }
 
 export async function painForClient(clientId: number) {
@@ -65,7 +71,8 @@ export async function painForClient(clientId: number) {
 export async function deletePain(id: number) {
   const rec = await db.pain.get(id);
   if (rec?.cid) addTombstone('pain', rec.cid);
-  return db.pain.delete(id);
+  await db.pain.delete(id);
+  scheduleSync();
 }
 
 export async function deletePainMany(ids: number[]) {
@@ -73,5 +80,6 @@ export async function deletePainMany(ids: number[]) {
   recs.forEach((r) => {
     if (r?.cid) addTombstone('pain', r.cid);
   });
-  return db.pain.bulkDelete(ids);
+  await db.pain.bulkDelete(ids);
+  scheduleSync();
 }

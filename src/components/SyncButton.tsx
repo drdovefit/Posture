@@ -11,7 +11,6 @@ import {
   doSignOut,
   updateDisplayName,
 } from '../state/auth';
-import { syncAll } from '../lib/sync';
 import {
   preSigninBlock,
   registerSigninFailure,
@@ -73,21 +72,6 @@ export default function SyncButton() {
     return () => clearInterval(iv);
   }, [open]);
   const resetWait = Math.ceil(resetCooldownRemaining(email.trim()) / 1000);
-
-  async function runSync() {
-    if (!user) return;
-    setBusy(true);
-    setStatus('Syncing…');
-    try {
-      await syncAll(user.uid);
-      setStatus('Synced ✓ Your data is backed up.');
-    } catch (e) {
-      setStatus('Sync failed. Check your connection and try again.');
-      console.error(e);
-    } finally {
-      setBusy(false);
-    }
-  }
 
   function closeModal() {
     setOpen(false);
@@ -230,9 +214,7 @@ export default function SyncButton() {
                 >
                   About you
                 </button>
-                <button className="btn-primary w-full" onClick={runSync} disabled={busy}>
-                  {busy ? 'Syncing…' : 'Sync now'}
-                </button>
+                <p className="text-xs text-slate-400">Your data syncs automatically.</p>
                 <button
                   className="btn-ghost w-full"
                   onClick={async () => {

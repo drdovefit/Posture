@@ -23,6 +23,7 @@ import { renderAnnotated } from '../../lib/report/renderAnnotated';
 import { getSuggestions } from '../../lib/measure/suggestions';
 import { scoreFeedback } from '../../lib/measure/feedback';
 import { db, saveAssessment } from '../../lib/db';
+import { scheduleSync } from '../../lib/autosync';
 import { useActiveClient } from '../../state/useClient';
 import { useAuth } from '../../state/auth';
 import PostureEditor from '../../components/PostureEditor';
@@ -241,6 +242,7 @@ export default function AnalyzePage() {
     };
     if (s.savedId != null) {
       await db.assessments.update(s.savedId, data);
+      scheduleSync();
     } else {
       const id = (await saveAssessment({ createdAt: Date.now(), ...data })) as number;
       patchShot(view, { savedId: id });

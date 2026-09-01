@@ -1,5 +1,6 @@
 import { db } from './db';
 import { analyze } from './measure';
+import { scheduleSync } from './autosync';
 import type { Profile } from './profile';
 
 /**
@@ -15,5 +16,6 @@ export async function rescoreAll(profile: Profile): Promise<number> {
     const r = analyze(a.view, a.landmarks, profile);
     await db.assessments.update(a.id, { metrics: r.metrics, score: r.score, synced: false });
   }
+  scheduleSync();
   return all.length;
 }

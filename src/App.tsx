@@ -4,6 +4,7 @@ import SyncButton from './components/SyncButton';
 import VerifyEmailGate from './components/VerifyEmailGate';
 import { useAuth } from './state/auth';
 import { handleAccountChange } from './lib/accountData';
+import { startAutoSync } from './lib/autosync';
 
 const nav = [
   { to: '/', label: 'Dashboard', icon: '◱', end: true },
@@ -20,6 +21,10 @@ export default function App() {
   const { user, ready } = useAuth();
   const promptedRef = useRef(false);
   const accountRef = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    startAutoSync();
+  }, []);
 
   // Tie local data to the signed-in account: wipe and re-pull when the account
   // changes or signs out, so one account never sees another's data here.
