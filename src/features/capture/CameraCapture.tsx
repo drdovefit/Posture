@@ -30,6 +30,8 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
   const [facing, setFacing] = useState<Facing>('user');
   const [timer, setTimer] = useState(0);
   const [countdown, setCountdown] = useState(0);
+  const [countBig, setCountBig] = useState(false);
+  const [shutterState, setShutterState] = useState<'idle' | 'fade' | 'flash'>('idle');
   const [showGuide, setShowGuide] = useState(false);
   const [lowLight, setLowLight] = useState(false);
   const [frameTip, setFrameTip] = useState<string | null>(null);
@@ -189,17 +191,34 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
   }
 
   async function shootNow() {
-    if (videoRef.current) onCapture(await grabFrame(videoRef.current));
+    const el = videoRef.current;
+    if (!el) return;
+    // Grab the frame at this instant, flash the shutter green for a second so
+    // the capture is unmistakable, then hand the photo off.
+    const blob = await grabFrame(el);
+    setCountdown(0);
+    setCountBig(false);
+    setShutterState('flash');
+    setTimeout(() => {
+      setShutterState('idle');
+      onCapture(blob);
+    }, 1000);
   }
   function cancelCountdown() {
     if (countdownRef.current) clearInterval(countdownRef.current);
     countdownRef.current = null;
     setCountdown(0);
+    setCountBig(false);
+    setShutterState('idle');
   }
   function shoot() {
     if (timer > 0) {
       let n = timer;
       setCountdown(n);
+      setCountBig(true); // starts big in the centre…
+      setShutterState('fade'); // …shutter fades white → dark grey over the timer
+      // …then shrinks up to the top-left so it's clearly a running countdown.
+      setTimeout(() => setCountBig(false), 700);
       countdownRef.current = setInterval(() => {
         n -= 1;
         setCountdown(n);
@@ -293,7 +312,8 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
               </div>
             )}
 
-            {(countdown > 0 || timer > 0) && (
+            {/* Armed-timer badge (before the countdown starts). */}
+            {countdown === 0 && timer > 0 && (
               <div className="absolute left-4 top-16 flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1 font-semibold text-white">
                 <svg
                   width="15"
@@ -309,8 +329,23 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
                   <circle cx="12" cy="12" r="9" />
                   <path d="M12 7v5l3 2" />
                 </svg>
-                <span className={countdown > 0 ? 'text-base tabular-nums' : 'text-sm'}>
-                  {countdown > 0 ? countdown : `${timer}s`}
+                <span className="text-sm">{timer}s</span>
+              </div>
+            )}
+
+            {/* Live countdown: starts big in the centre, then shrinks to the
+                top-left so it can't be missed. Sits above the overlay. */}
+            {countdown > 0 && (
+              <div className="pointer-events-none absolute inset-0 z-30">
+                <span
+                  className={`absolute font-bold tabular-nums text-white transition-all duration-500 ease-out ${
+                    countBig
+                      ? 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[7rem] leading-none'
+                      : 'left-6 top-16 text-4xl'
+                  }`}
+                  style={{ textShadow: '0 2px 12px rgba(0,0,0,0.6)' }}
+                >
+                  {countdown}
                 </span>
               </div>
             )}
@@ -362,7 +397,27 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
           <button
             onClick={countdown > 0 ? cancelCountdown : shoot}
             disabled={!!error}
-            className="h-16 w-16 rounded-full border-4 border-white bg-white/20 disabled:opacity-40"
+            className="h-16 w-16 rounded-full border-4 border-white disabled:opacity-40"
+            style={
+              shutterState === 'fade'
+                ? {
+                    backgroundColor: '#374151', // dark grey target
+                    transitionProperty: 'background-color',
+                    transitionTimingFunction: 'linear',
+                    transitionDuration: `${timer}s`, // fades over the whole timer
+                  }
+                : shutterState === 'flash'
+                  ? {
+                      backgroundColor: '#22c55e', // green flash on capture
+                      transitionProperty: 'background-color',
+                      transitionDuration: '120ms',
+                    }
+                  : {
+                      backgroundColor: '#ffffff', // starts white
+                      transitionProperty: 'background-color',
+                      transitionDuration: '300ms',
+                    }
+            }
             aria-label={countdown > 0 ? 'Cancel timer' : 'Capture photo'}
           />
           <span className="w-16" />
