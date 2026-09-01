@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -36,7 +36,6 @@ export default function SyncButton() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
-  const syncedFor = useRef<string | null>(null);
 
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
@@ -89,15 +88,6 @@ export default function SyncButton() {
       setBusy(false);
     }
   }
-
-  useEffect(() => {
-    if (user && syncedFor.current !== user.uid) {
-      syncedFor.current = user.uid;
-      runSync();
-    }
-    if (!user) syncedFor.current = null;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
 
   function closeModal() {
     setOpen(false);

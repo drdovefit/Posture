@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import SyncButton from './components/SyncButton';
 import VerifyEmailGate from './components/VerifyEmailGate';
 import { useAuth } from './state/auth';
+import { handleAccountChange } from './lib/accountData';
 
 const nav = [
   { to: '/', label: 'Dashboard', icon: '◱', end: true },
@@ -18,6 +19,17 @@ export default function App() {
   const navigate = useNavigate();
   const { user, ready } = useAuth();
   const promptedRef = useRef(false);
+  const accountRef = useRef<string | null | undefined>(undefined);
+
+  // Tie local data to the signed-in account: wipe and re-pull when the account
+  // changes or signs out, so one account never sees another's data here.
+  useEffect(() => {
+    if (!ready) return;
+    const uid = user?.uid ?? null;
+    if (accountRef.current === uid) return;
+    accountRef.current = uid;
+    handleAccountChange(uid);
+  }, [ready, user]);
 
   // First time someone signs in, open the profile setup once. After they save
   // it (posturelab-profile-done), it only shows from the account menu.
