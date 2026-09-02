@@ -27,7 +27,7 @@ async function wipeLocal(): Promise<void> {
  * data from the cloud. A first sign-in from a never-signed-in state keeps the
  * local scans and lets them upload to the new account.
  */
-export async function handleAccountChange(uid: string | null): Promise<void> {
+export async function handleAccountChange(uid: string | null): Promise<boolean> {
   let owner: string | null = null;
   try {
     owner = localStorage.getItem(OWNER_KEY);
@@ -35,6 +35,7 @@ export async function handleAccountChange(uid: string | null): Promise<void> {
     owner = null;
   }
 
+  let hasProfile = false;
   if (uid) {
     if (owner && owner !== uid) {
       await wipeLocal(); // switched to a different account
@@ -50,7 +51,7 @@ export async function handleAccountChange(uid: string | null): Promise<void> {
       /* offline or rules not ready; will retry on next sign-in/sync */
     }
     try {
-      const hasProfile = await syncProfile(uid);
+      hasProfile = await syncProfile(uid);
       // If a saved profile came down, don't force the first-run setup screen.
       if (hasProfile) localStorage.setItem('posturelab-profile-done', '1');
     } catch {
@@ -65,4 +66,5 @@ export async function handleAccountChange(uid: string | null): Promise<void> {
       /* ignore */
     }
   }
+  return hasProfile;
 }

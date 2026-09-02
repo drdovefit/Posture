@@ -11,6 +11,8 @@ interface Props {
   /** When set, the overlay is read-only (no drag handles) — e.g. thumbnails. */
   readOnly?: boolean;
   onChange?: (lm: Landmarks) => void;
+  /** Fired when the user starts dragging a dot, so the caller can snapshot for undo. */
+  onEditStart?: () => void;
 }
 
 const MIN_ZOOM = 1;
@@ -30,6 +32,7 @@ export default function PostureEditor({
   metrics = [],
   readOnly = false,
   onChange,
+  onEditStart,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -252,6 +255,7 @@ export default function PostureEditor({
                 if (readOnly) return;
                 e.stopPropagation();
                 (e.target as HTMLElement).setPointerCapture(e.pointerId);
+                onEditStart?.();
                 setDragKey(key);
               }}
               onPointerMove={(e) => {

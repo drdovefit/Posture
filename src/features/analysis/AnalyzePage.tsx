@@ -14,6 +14,13 @@ function detectionConfidence(raw: RawLandmark[]): number {
   return vals.reduce((s, v) => s + v, 0) / vals.length;
 }
 
+/** True when any dot has been moved well outside the image (an accidental fling). */
+function dotFarOff(lm: Landmarks): boolean {
+  return Object.values(lm).some(
+    (p) => p && (p.x < -0.06 || p.x > 1.06 || p.y < -0.06 || p.y > 1.06),
+  );
+}
+
 /** Shoulder separation (normalized x), used to sanity-check the chosen view. */
 function shoulderSeparation(raw: RawLandmark[]): number | undefined {
   if (!raw[11] || !raw[12]) return undefined;
@@ -31,6 +38,7 @@ function torsoVis(raw: RawLandmark[]): number {
   });
 }
 import { renderAnnotated } from '../../lib/report/renderAnnotated';
+import { shareOrDownloadFile } from '../../lib/share';
 import { getSuggestions } from '../../lib/measure/suggestions';
 import { scoreFeedback } from '../../lib/measure/feedback';
 import { db, saveAssessment } from '../../lib/db';
@@ -76,6 +84,9 @@ export default function AnalyzePage() {
   const [detecting, setDetecting] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [showDotGuide, setShowDotGuide] = useState(false);
+  // Undo for a dot dragged well off the image: snapshot at drag start.
+  const undoSnapshot = useRef<Landmarks | null>(null);
+  const [undoLm, setUndoLm] = useState<Landmarks | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -114,6 +125,8 @@ export default function AnalyzePage() {
     }
     const forView = view;
     setAnimalSaveGone(false);
+    setUndoLm(null);
+    undoSnapshot.current = null;
     const url = URL.createObjectURL(blob);
     const img = new Image();
     img.src = url;
@@ -200,6 +213,8 @@ export default function AnalyzePage() {
   async function reDetect() {
     const s = shots[view];
     if (!s?.imgEl) return;
+    setUndoLm(null);
+    undoSnapshot.current = null;
     setDetecting(true);
     patchShot(view, { detectMsg: 'Re-detecting…' });
     try {
@@ -288,16 +303,7 @@ export default function AnalyzePage() {
       watermark: 'full',
     });
     const file = new File([blob], annotatedFilename(), { type: 'image/png' });
-    const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean };
-    if (nav.canShare?.({ files: [file] })) {
-      try {
-        await nav.share({ files: [file], title: 'My PostureLab result' });
-        return;
-      } catch (e) {
-        if ((e as { name?: string })?.name === 'AbortError') return;
-      }
-    }
-    triggerDownload(blob);
+    await shareOrDownloadFile(file, 'My PostureLab result');
   }
   async function downloadImage() {
     const s = shots[view];
@@ -413,8 +419,41 @@ export default function AnalyzePage() {
                   view={view}
                   landmarks={shot.landmarks}
                   metrics={result.metrics}
-                  onChange={(lm) => patchShot(view, { landmarks: lm, detected: true, detectMsg: '' })}
+                  onEditStart={() => {
+                    undoSnapshot.current = shot.landmarks;
+                  }}
+                  onChange={(lm) => {
+                    // If a dot was dragged well off the image, offer to undo.
+                    if (dotFarOff(lm) && undoSnapshot.current) {
+                      setUndoLm(undoSnapshot.current);
+                    }
+                    patchShot(view, { landmarks: lm, detected: true, detectMsg: '' });
+                  }}
                 />
+              )}
+              {undoLm && (
+                <div className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 p-2 text-sm text-amber-800 dark:border-amber-800/60 dark:bg-amber-900/15 dark:text-amber-200">
+                  <span className="flex-1">Moved a dot by accident? Undo it, or use Re-detect.</span>
+                  <button
+                    className="grid h-8 w-8 place-items-center rounded-full bg-amber-500 text-white"
+                    title="Undo"
+                    onClick={() => {
+                      const snap = undoLm;
+                      setUndoLm(null);
+                      undoSnapshot.current = null;
+                      if (snap) patchShot(view, { landmarks: snap });
+                    }}
+                  >
+                    ↩
+                  </button>
+                  <button
+                    className="grid h-8 w-8 place-items-center rounded-full bg-amber-200 text-amber-700 dark:bg-amber-900/40"
+                    title="Dismiss"
+                    onClick={() => setUndoLm(null)}
+                  >
+                    ✕
+                  </button>
+                </div>
               )}
               <div className="space-y-2">
                 {shot.detectMsg && (

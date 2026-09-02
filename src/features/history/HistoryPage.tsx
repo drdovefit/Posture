@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Link } from 'react-router-dom';
 import { db, deleteAssessment } from '../../lib/db';
 import { useActiveClient } from '../../state/useClient';
-import { useBlobUrl } from '../../state/useBlobUrl';
+import { shareOrDownloadFile } from '../../lib/share';
 import { useCroppedPortrait } from '../../state/useCroppedPortrait';
 import { exportAssessmentPdf } from '../../lib/report/pdf';
 import { analyze } from '../../lib/measure';
@@ -25,7 +25,6 @@ function scoreColor(score: number) {
 }
 
 function Row({ a, client }: { a: Assessment; client: Client | null }) {
-  const url = useBlobUrl(a.annotated ?? a.photo); // full image, for the download link
   const thumb = useCroppedPortrait(a); // cropped to the body, for the thumbnail
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -80,13 +79,17 @@ function Row({ a, client }: { a: Assessment; client: Client | null }) {
             >
               Export PDF
             </button>
-            <a
+            <button
               className="btn-ghost !py-1 text-xs"
-              href={url}
-              download={`posturelab-${a.view}-${new Date(a.createdAt).toISOString().slice(0, 10)}.png`}
+              onClick={async () => {
+                const blob = a.annotated ?? a.photo;
+                if (!blob) return;
+                const name = `posturelab-${a.view}-${new Date(a.createdAt).toISOString().slice(0, 10)}.png`;
+                await shareOrDownloadFile(new File([blob], name, { type: blob.type || 'image/png' }), 'My PostureLab result');
+              }}
             >
-              ⬇ Image
-            </a>
+              Share image
+            </button>
             <button
               className="btn-ghost !py-1 text-xs !text-red-600"
               onClick={() => setConfirmDelete(true)}

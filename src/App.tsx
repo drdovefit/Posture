@@ -84,16 +84,13 @@ export default function App() {
     accountRef.current = uid;
     let alive = true;
     (async () => {
-      await handleAccountChange(uid);
+      // hasProfile reflects the ACCOUNT's saved "About you", not local storage
+      // (which can linger between accounts). A new account with nothing saved
+      // opens the profile setup; once they Save, it never forces it again.
+      const hasProfile = await handleAccountChange(uid);
       if (!alive || !uid || promptedRef.current) return;
       promptedRef.current = true;
-      let done = false;
-      try {
-        done = !!localStorage.getItem('posturelab-profile-done');
-      } catch {
-        done = false;
-      }
-      if (!done) navigate('/profile');
+      if (!hasProfile) navigate('/profile');
     })();
     if (!uid) promptedRef.current = false;
     return () => {

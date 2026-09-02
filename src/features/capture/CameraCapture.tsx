@@ -187,19 +187,36 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
   }, []);
 
   function grabFrame(el: HTMLVideoElement, maxW = 1400): Promise<Blob> {
-    // No zoom: capture the whole camera frame exactly as the preview shows it.
+    // The preview fills the screen (object-cover), cropping to the on-screen
+    // shape the way a phone camera does. Capture that same centre crop so the
+    // saved photo matches exactly what was framed — no gaps, no letterbox.
     const vw = el.videoWidth || 1080;
     const vh = el.videoHeight || 1920;
-    const scale = Math.min(1, maxW / vw);
+    const dispW = el.clientWidth || vw;
+    const dispH = el.clientHeight || vh;
+    const targetAR = dispW / dispH;
+    const srcAR = vw / vh;
+    let sw = vw;
+    let sh = vh;
+    let sx = 0;
+    let sy = 0;
+    if (srcAR > targetAR) {
+      sw = Math.round(vh * targetAR);
+      sx = Math.round((vw - sw) / 2);
+    } else {
+      sh = Math.round(vw / targetAR);
+      sy = Math.round((vh - sh) / 2);
+    }
+    const scale = Math.min(1, maxW / sw);
     const canvas = document.createElement('canvas');
-    canvas.width = Math.round(vw * scale);
-    canvas.height = Math.round(vh * scale);
+    canvas.width = Math.round(sw * scale);
+    canvas.height = Math.round(sh * scale);
     const ctx = canvas.getContext('2d')!;
     if (facing === 'user') {
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
     }
-    ctx.drawImage(el, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(el, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
     return new Promise((res) => canvas.toBlob((b) => res(b!), 'image/jpeg', 0.9));
   }
 
@@ -252,8 +269,11 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#eef4ff]">
-      <div className="relative flex-1 overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex flex-col overflow-hidden overscroll-none bg-[#eef4ff]"
+      style={{ height: '100dvh' }}
+    >
+      <div className="relative min-h-0 flex-1 overflow-hidden">
         {error ? (
           <div className="grid h-full place-items-center p-6 text-center text-slate-600">
             {error}
@@ -264,7 +284,7 @@ export default function CameraCapture({ view, onCapture, onClose, onViewChange }
               ref={videoRef}
               playsInline
               muted
-              className="h-full w-full object-contain"
+              className="h-full w-full object-cover"
               style={{ transform: previewTransform, transformOrigin: 'center' }}
             />
 

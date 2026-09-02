@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import type { Assessment, Client, Metric } from '../types';
+import { shareOrDownloadFile } from '../share';
 import { BRAND_IMAGE_KEYS, storedBrandImage } from '../brandImages';
 import { renderAnnotated } from './renderAnnotated';
 
@@ -199,5 +200,9 @@ export async function exportAssessmentPdf(client: Client, a: Assessment) {
   const fname = `posturelab-${client.name.replace(/\s+/g, '_')}-${new Date(a.createdAt)
     .toISOString()
     .slice(0, 10)}.pdf`;
-  doc.save(fname);
+  // Share the real PDF file (OS share sheet on mobile, download on desktop)
+  // rather than doc.save(), which on phones opens a blob: URL that gets shared
+  // as a dead "blob" link.
+  const pdfBlob = doc.output('blob');
+  await shareOrDownloadFile(new File([pdfBlob], fname, { type: 'application/pdf' }), 'PostureLab report');
 }
