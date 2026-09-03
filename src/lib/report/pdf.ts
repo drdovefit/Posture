@@ -1,6 +1,5 @@
 import { jsPDF } from 'jspdf';
 import type { Assessment, Client, Metric } from '../types';
-import { shareOrDownloadFile } from '../share';
 import { BRAND_IMAGE_KEYS, storedBrandImage } from '../brandImages';
 import { renderAnnotated } from './renderAnnotated';
 
@@ -200,9 +199,19 @@ export async function exportAssessmentPdf(client: Client, a: Assessment) {
   const fname = `posturelab-${client.name.replace(/\s+/g, '_')}-${new Date(a.createdAt)
     .toISOString()
     .slice(0, 10)}.pdf`;
-  // Share the real PDF file (OS share sheet on mobile, download on desktop)
-  // rather than doc.save(), which on phones opens a blob: URL that gets shared
-  // as a dead "blob" link.
-  const pdfBlob = doc.output('blob');
-  await shareOrDownloadFile(new File([pdfBlob], fname, { type: 'application/pdf' }), 'PostureLab report');
+  // Prefer the OS share sheet with the real PDF file (so mobile sends a proper
+  // attachment, not a dead blob: link). If sharing isn't available or fails,
+  // fall back to jsPDF's own save, which downloads reliably everywhere.
+  const file = new File([doc.output('blob')], fname, { type: 'application/pdf' });
+  const nav = navigator as Navigator & { canShare?: (d?: ShareData) => boolean };
+  if (nav.canShare?.({ files: [file] })) {
+    try {
+      await nav.share({ files: [file], title: 'PostureLab report' });
+      return;
+    } catch (e) {
+      if ((e as { name?: string })?.name === 'AbortError') return;
+      // otherwise fall through to a normal save
+    }
+  }
+  doc.save(fname);
 }

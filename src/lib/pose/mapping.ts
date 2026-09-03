@@ -47,19 +47,21 @@ export function mapLandmarks(raw: RawLandmark[], view: ViewType): Landmarks {
     const ear = morevisible(raw, IDX.earL, IDX.earR);
     const hip = morevisible(raw, IDX.hipL, IDX.hipR);
     // The pelvis tilt markers (ASIS front / PSIS back) aren't in the pose model,
-    // so seed them level around the hip. "Front" is guessed from which way the
-    // head faces (ear offset from the hip); the user drags them onto the real
-    // bony points. Starting level = neutral tilt until adjusted.
+    // so we estimate them: "front" is the side the head faces (ear offset from
+    // the hip), placed at the average anterior pelvic tilt (the ASIS sits a
+    // little lower than the PSIS). This auto-places a realistic tilt; the user
+    // can still nudge them for precision.
     const frontSign = Math.sign(ear.x - hip.x) || 1;
     const off = 0.06;
+    const tilt = 0.012; // ~11° average anterior tilt: front hip a touch lower
     return {
       ear,
       shoulder: morevisible(raw, IDX.shoulderL, IDX.shoulderR),
       hip,
       knee: morevisible(raw, IDX.kneeL, IDX.kneeR),
       ankle: morevisible(raw, IDX.ankleL, IDX.ankleR),
-      pelvisFront: { x: hip.x + frontSign * off, y: hip.y },
-      pelvisBack: { x: hip.x - frontSign * off, y: hip.y },
+      pelvisFront: { x: hip.x + frontSign * off, y: hip.y + tilt },
+      pelvisBack: { x: hip.x - frontSign * off, y: hip.y - tilt },
     };
   }
 

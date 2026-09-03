@@ -169,6 +169,9 @@ export default function ProfilePage() {
     // Back the profile up to the account so it survives sign-out and follows
     // the user to their other devices.
     void pushProfile().catch(() => {});
+    // Apply the new profile (conditions, injuries, etc.) to every past scan
+    // right away, so the user never has to click a separate "update" button.
+    void rescoreAll(getProfile()).catch(() => {});
     setDirty(false);
     setSavedOnce(true);
   }

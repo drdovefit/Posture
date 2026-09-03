@@ -71,14 +71,6 @@ export function photoWarnings(
 ): string[] {
   const warns: string[] = [];
 
-  // The front-hip (ASIS) and back-hip (PSIS) dots aren't in the pose model, so
-  // they're seeded level and almost always need adjusting by hand on a side scan.
-  if (view === 'lateral') {
-    warns.push(
-      'Place the front-hip and back-hip dots by hand — these two aren’t auto-detected, so they start level and usually aren’t.',
-    );
-  }
-
   // Low light.
   const bright = imageBrightness(img);
   if (bright != null && bright < 55) {

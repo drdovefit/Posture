@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useLiveQuery } from 'dexie-react-hooks';
 import type { Landmarks, ViewType } from '../../lib/types';
 import { analyze } from '../../lib/measure';
 import { detectPose, type RawLandmark } from '../../lib/pose/landmarker';
@@ -87,6 +88,45 @@ export default function AnalyzePage() {
   // Undo for a dot dragged well off the image: snapshot at drag start.
   const undoSnapshot = useRef<Landmarks | null>(null);
   const [undoLm, setUndoLm] = useState<Landmarks | null>(null);
+
+  // First-scan guide recommendation (once, before the very first scan).
+  const navigate = useNavigate();
+  const savedCount = useLiveQuery(() => db.assessments.count(), [], 0);
+  const [scanGuideSeen, setScanGuideSeen] = useState(() => {
+    try {
+      return localStorage.getItem('posturelab-scan-guide-seen') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [showScanGuide, setShowScanGuide] = useState(false);
+  const pendingScan = useRef<'camera' | 'file' | null>(null);
+
+  function runScan(action: 'camera' | 'file') {
+    if (action === 'camera') setShowCamera(true);
+    else fileRef.current?.click();
+  }
+  function startScan(action: 'camera' | 'file') {
+    if (!user) {
+      setShowSignIn(true);
+      return;
+    }
+    // First ever scan and they haven't seen the guide tip: recommend it once.
+    if (!scanGuideSeen && (savedCount ?? 0) === 0) {
+      pendingScan.current = action;
+      setShowScanGuide(true);
+      return;
+    }
+    runScan(action);
+  }
+  function markScanGuideSeen() {
+    try {
+      localStorage.setItem('posturelab-scan-guide-seen', '1');
+    } catch {
+      /* ignore */
+    }
+    setScanGuideSeen(true);
+  }
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -391,13 +431,10 @@ export default function AnalyzePage() {
                 Front, and both are kept so you can view them together.
               </p>
               <div className="flex flex-wrap gap-3">
-                <button className="btn-primary" onClick={() => fileRef.current?.click()}>
+                <button className="btn-primary" onClick={() => startScan('file')}>
                   ＋ Add {viewLabel} photo
                 </button>
-                <button
-                  className="btn-ghost"
-                  onClick={() => (user ? setShowCamera(true) : setShowSignIn(true))}
-                >
+                <button className="btn-ghost" onClick={() => startScan('camera')}>
                   Use camera
                 </button>
               </div>
@@ -659,6 +696,51 @@ export default function AnalyzePage() {
       )}
 
       <DotGuide view={view} open={showDotGuide} onClose={() => setShowDotGuide(false)} />
+
+      {showScanGuide && (
+        <div
+          className="fixed inset-0 z-[65] grid place-items-center bg-black/70 p-4"
+          onClick={() => setShowScanGuide(false)}
+        >
+          <div
+            className="card w-full max-w-sm space-y-4 p-6 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-brand-100 text-2xl dark:bg-brand-900/40">
+              📘
+            </div>
+            <div>
+              <h2 className="text-lg font-bold">New here? Check the guide first</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                A quick read on how to stand, light, and frame your photo makes your
+                first scan far more accurate.
+              </p>
+            </div>
+            <button
+              className="btn-primary w-full"
+              onClick={() => {
+                markScanGuideSeen();
+                setShowScanGuide(false);
+                navigate('/guide');
+              }}
+            >
+              See the guide
+            </button>
+            <button
+              className="btn-ghost w-full"
+              onClick={() => {
+                markScanGuideSeen();
+                setShowScanGuide(false);
+                const a = pendingScan.current;
+                pendingScan.current = null;
+                if (a) runScan(a);
+              }}
+            >
+              I’ve already checked it out
+            </button>
+          </div>
+        </div>
+      )}
 
       {showSignIn && (
         <SignInModal
