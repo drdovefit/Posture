@@ -15,6 +15,7 @@ import { isOwnerEmail } from './feedback';
 export type Tier = 'free' | 'pro';
 
 const PREVIEW_KEY = 'posturelab-preview-free';
+const TEST_PRO_KEY = 'posturelab-test-pro';
 
 interface TierCtx {
   tier: Tier;
@@ -25,6 +26,8 @@ interface TierCtx {
   setPreviewFree: (v: boolean) => void;
   /** Whether this account may use the preview toggle (owners only). */
   canPreview: boolean;
+  /** Testing: subscribe (true) or cancel (false) instantly on this device. */
+  setTestSubscribed: (v: boolean) => void;
 }
 
 const Ctx = createContext<TierCtx>({
@@ -34,6 +37,7 @@ const Ctx = createContext<TierCtx>({
   previewFree: false,
   setPreviewFree: () => {},
   canPreview: false,
+  setTestSubscribed: () => {},
 });
 
 export function TierProvider({ children }: { children: ReactNode }) {
@@ -48,6 +52,13 @@ export function TierProvider({ children }: { children: ReactNode }) {
       return false;
     }
   });
+  const [testPro, setTestProState] = useState(() => {
+    try {
+      return localStorage.getItem(TEST_PRO_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
 
   function setPreviewFree(v: boolean) {
     setPreviewState(v);
@@ -57,6 +68,20 @@ export function TierProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignore */
     }
+  }
+
+  // Testing subscribe/cancel that works on any account: subscribing forces Pro,
+  // cancelling forces Free. On owner accounts it also clears/sets the preview so
+  // the owner (who is always Pro) can still cancel to Free while testing.
+  function setTestSubscribed(v: boolean) {
+    setTestProState(v);
+    try {
+      if (v) localStorage.setItem(TEST_PRO_KEY, '1');
+      else localStorage.removeItem(TEST_PRO_KEY);
+    } catch {
+      /* ignore */
+    }
+    if (owner) setPreviewFree(!v);
   }
 
   useEffect(() => {
@@ -103,7 +128,8 @@ export function TierProvider({ children }: { children: ReactNode }) {
     };
   }, [authReady, user, owner]);
 
-  const tier: Tier = previewFree ? 'free' : real;
+  const proNow = real === 'pro' || testPro;
+  const tier: Tier = previewFree ? 'free' : proNow ? 'pro' : 'free';
 
   return (
     <Ctx.Provider
@@ -114,6 +140,7 @@ export function TierProvider({ children }: { children: ReactNode }) {
         previewFree,
         setPreviewFree,
         canPreview: owner,
+        setTestSubscribed,
       }}
     >
       {children}

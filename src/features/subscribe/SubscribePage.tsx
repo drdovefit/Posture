@@ -1,8 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTier } from '../../lib/entitlement';
 
-/** Update this to your Core Academy (Skool) join link. */
-const CORE_ACADEMY_URL = 'https://www.skool.com/';
 const PRICE = '$27';
 
 type Row = { label: string; free: string | boolean; pro: string | boolean };
@@ -30,7 +28,7 @@ function Cell({ v }: { v: string | boolean }) {
 }
 
 export default function SubscribePage() {
-  const { isPro } = useTier();
+  const { isPro, setTestSubscribed } = useTier();
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
@@ -56,6 +54,14 @@ export default function SubscribePage() {
           <Link to="/analyze" className="btn-primary mt-4 inline-block">
             New scan
           </Link>
+          <div className="mt-4">
+            <button
+              onClick={() => setTestSubscribed(false)}
+              className="text-xs font-medium text-slate-400 hover:text-red-500 hover:underline"
+            >
+              Cancel subscription (testing)
+            </button>
+          </div>
         </div>
       ) : (
         <>
@@ -92,14 +98,12 @@ export default function SubscribePage() {
                 <li>✓ Pain diary</li>
                 <li>✓ The whole Core Academy: class, LPF flow, mobility, private sessions</li>
               </ul>
-              <a
-                href={CORE_ACADEMY_URL}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={() => setTestSubscribed(true)}
                 className="btn-primary mt-5 block w-full text-center"
               >
                 Go Pro with CorePRO
-              </a>
+              </button>
             </div>
           </div>
 
@@ -145,16 +149,11 @@ export default function SubscribePage() {
           </div>
 
           <div className="text-center">
-            <a
-              href={CORE_ACADEMY_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-primary inline-block px-8"
-            >
+            <button onClick={() => setTestSubscribed(true)} className="btn-primary inline-block px-8">
               Unlock everything — {PRICE}/mo
-            </a>
+            </button>
             <p className="mt-2 text-xs text-slate-400">
-              Cancel anytime. Manage your membership from Settings.
+              Testing mode: this unlocks Pro instantly. Manage it from Settings.
             </p>
           </div>
         </>

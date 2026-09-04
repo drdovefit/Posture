@@ -47,7 +47,7 @@ function Chip({
 export default function SettingsPage() {
   const { user } = useAuth();
   const isOwner = isOwnerEmail(user?.email);
-  const { isPro, previewFree, setPreviewFree, canPreview } = useTier();
+  const { isPro, previewFree, setPreviewFree, canPreview, setTestSubscribed } = useTier();
 
   // --- Feedback --------------------------------------------------------------
   const initialDraft = loadDraft();
@@ -118,9 +118,19 @@ export default function SettingsPage() {
             {isPro ? 'Pro' : 'Free'}
           </span>
         </div>
-        <Link to="/subscribe" className="btn-primary mt-3 inline-block">
-          {isPro ? 'View plan' : 'Upgrade to Pro'}
-        </Link>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Link to="/subscribe" className="btn-primary inline-block">
+            {isPro ? 'View plan' : 'Upgrade to Pro'}
+          </Link>
+          {isPro && (
+            <button
+              onClick={() => setTestSubscribed(false)}
+              className="text-xs font-medium text-slate-400 hover:text-red-500 hover:underline"
+            >
+              Cancel subscription (testing)
+            </button>
+          )}
+        </div>
         {canPreview && (
           <label className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-3 text-sm text-slate-500 dark:border-slate-800">
             <input

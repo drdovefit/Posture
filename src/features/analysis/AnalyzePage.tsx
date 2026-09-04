@@ -425,6 +425,17 @@ export default function AnalyzePage() {
                   ✓ photo
                 </span>
               )}
+              {!isPro && (
+                <span
+                  className={`ml-auto rounded-full px-1.5 text-[10px] font-semibold ${
+                    Math.max(0, 1 - (savedByView?.[v.id] ?? 0)) === 0
+                      ? 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-300'
+                      : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+                  }`}
+                >
+                  {Math.max(0, 1 - (savedByView?.[v.id] ?? 0))} left
+                </span>
+              )}
             </div>
             <div className="hidden text-xs text-slate-500 sm:block">{v.hint}</div>
           </button>
