@@ -4,7 +4,7 @@ import { useTier } from '../../lib/entitlement';
 const PRICE = 27;
 const PER_DAY = (PRICE / 30).toFixed(2); // ~0.90
 
-// A CorePRO-first comparison. Free is the losing column on purpose.
+// A Premium-first comparison. Free is the losing column on purpose.
 type Row = { label: string; free: boolean; pro: boolean };
 const ROWS: Row[] = [
   { label: 'A quick posture score', free: true, pro: true },
@@ -33,7 +33,7 @@ export default function SubscribePage() {
     return (
       <div className="mx-auto max-w-lg space-y-4 py-10 text-center">
         <div className="text-4xl">🎉</div>
-        <h1 className="text-2xl font-bold">You're a CorePRO member</h1>
+        <h1 className="text-2xl font-bold">You're a Premium member</h1>
         <p className="text-slate-500">Everything is unlocked. Go straighten out.</p>
         <Link to="/analyze" className="btn-primary inline-block">Take a scan</Link>
         <div>
@@ -52,14 +52,14 @@ export default function SubscribePage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-8 pb-16">
-      {/* HERO — CorePRO first */}
+      {/* HERO — Premium first */}
       <div className="rounded-3xl bg-gradient-to-b from-brand-600 to-brand-800 px-6 py-10 text-center text-white shadow-xl">
-        <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/80">CorePRO Membership</p>
+        <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/80">Premium Membership</p>
         <h1 className="mt-3 text-3xl font-extrabold leading-tight sm:text-4xl">
           Your coach and your posture app,<br />in one membership.
         </h1>
         <p className="mx-auto mt-3 max-w-lg text-white/85">
-          CorePRO gives you the full coaching program <em>and</em> unlocks everything in PostureLab —
+          Premium gives you the full coaching program <em>and</em> unlocks everything in PostureLab —
           every problem named, every fix shown, live classes, and time with your coach.
         </p>
         <div className="mt-6 flex items-baseline justify-center gap-2">
@@ -71,7 +71,7 @@ export default function SubscribePage() {
           onClick={goPro}
           className="mt-5 rounded-full bg-white px-10 py-3 text-base font-bold text-brand-700 shadow-lg transition-transform hover:scale-[1.03]"
         >
-          Start CorePRO
+          Go Premium
         </button>
       </div>
 
@@ -112,7 +112,7 @@ export default function SubscribePage() {
           onClick={goPro}
           className="mt-5 w-full rounded-xl bg-brand-500 py-3 text-base font-bold text-white shadow-lg transition-transform hover:scale-[1.02]"
         >
-          Start CorePRO — ${PRICE}/mo
+          Go Premium — ${PRICE}/mo
         </button>
         <p className="mt-2 text-center text-xs text-slate-400">Cancel anytime · your data stays yours</p>
       </div>
@@ -120,7 +120,7 @@ export default function SubscribePage() {
       {/* FREE — one muted line, not a co-equal plan */}
       <p className="text-center text-sm text-slate-500">
         On the free plan you get a quick score to try it out. What's actually wrong and how to fix it
-        stays <span className="font-semibold text-slate-600 dark:text-slate-300">locked</span> until you join CorePRO.
+        stays <span className="font-semibold text-slate-600 dark:text-slate-300">locked</span> until you join Premium.
       </p>
 
       {/* COMPARISON — Free is clearly the lesser column */}
@@ -128,7 +128,7 @@ export default function SubscribePage() {
         <div className="grid grid-cols-[1fr_3.5rem_4.5rem] items-center gap-x-3 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-400 dark:bg-slate-900/50">
           <span>What you get</span>
           <span className="text-center">Free</span>
-          <span className="rounded-md bg-brand-500 py-1 text-center text-white">CorePRO</span>
+          <span className="rounded-md bg-brand-500 py-1 text-center text-white">Premium</span>
         </div>
         {ROWS.map((r, i) => (
           <div
@@ -169,7 +169,7 @@ export default function SubscribePage() {
           onClick={goPro}
           className="mt-5 rounded-full bg-brand-500 px-10 py-3 text-base font-bold text-white shadow-lg transition-transform hover:scale-[1.03]"
         >
-          Start CorePRO — ${PRICE}/mo
+          Go Premium — ${PRICE}/mo
         </button>
         <p className="mt-2 text-xs text-white/60">Cancel anytime. Manage it from Settings.</p>
       </div>

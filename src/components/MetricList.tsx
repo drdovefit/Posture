@@ -79,7 +79,7 @@ export default function MetricList({ metrics }: { metrics: Metric[] }) {
                 {locked.length} more area{locked.length === 1 ? '' : 's'} to work on
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                See every problem and exactly how to fix it with CorePRO.
+                See every problem and exactly how to fix it with Premium.
               </p>
               <Link to="/subscribe" className="btn-primary mt-3 inline-block w-full">
                 Subscribe to unlock

@@ -80,7 +80,7 @@ export const TERMS_HTML = `
 <p>PostureLab and its associated programs may include community areas where members share progress and ask questions. Anything you post there, you post at your own choice, and you allow us to display it as part of running that community. Treat other members with respect. Do not post someone else's scan, photo, or personal details without their permission. We may moderate, remove, or restrict community content, but we are not obliged to review everything and are not responsible for what members post.</p>
 
 <h2>14. Memberships &amp; billing</h2>
-<p>Some features are free. Others require a paid membership (CorePRO). If you buy one, you agree to the price and billing cycle shown at checkout.</p>
+<p>Some features are free. Others require a paid membership (Premium). If you buy one, you agree to the price and billing cycle shown at checkout.</p>
 <p><b>Auto-renewal.</b> Paid memberships renew automatically at the end of each cycle at the then-current price, until you cancel. You authorize us and our payment provider to charge your payment method for each renewal.</p>
 <p><b>Cancellation.</b> You can cancel any time; it takes effect at the end of the current cycle, and you keep access until then. We do not provide partial-period refunds.</p>
 <p><b>Refunds and price changes.</b> Except where the law requires otherwise, payments are non-refundable. We may change prices; a change will not affect the cycle you have already paid for, and we will give notice before it applies to your next renewal.</p>
