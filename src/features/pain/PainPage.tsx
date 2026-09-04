@@ -13,6 +13,8 @@ import { addPain, db, deletePain, deletePainMany } from '../../lib/db';
 import { useActiveClient } from '../../state/useClient';
 import { useAuth } from '../../state/auth';
 import SignInModal from '../../components/SignInModal';
+import ProLock from '../../components/ProLock';
+import { useTier } from '../../lib/entitlement';
 
 const NOTES_MAX = 399;
 
@@ -63,6 +65,7 @@ export default function PainPage() {
   );
 
   const { user } = useAuth();
+  const { isPro } = useTier();
   const [showSignIn, setShowSignIn] = useState(false);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [region, setRegion] = useState(REGIONS[0]);
@@ -160,6 +163,23 @@ export default function PainPage() {
   const chartData = [...(entries ?? [])]
     .sort((a, b) => a.date.localeCompare(b.date))
     .map((e) => ({ date: e.date.slice(5), severity: e.severity }));
+
+  if (!isPro) {
+    return (
+      <div className="mx-auto max-w-md space-y-5 py-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">Pain diary</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Log discomfort over time and watch it alongside your posture progress.
+          </p>
+        </div>
+        <ProLock
+          title="The pain diary is Pro"
+          blurb="Track where you're sore over time and see it against your posture trend."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">

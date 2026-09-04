@@ -16,6 +16,7 @@ const PainPage = lazy(() => import('./features/pain/PainPage'));
 const GuidePage = lazy(() => import('./features/dashboard/GuidePage'));
 const SettingsPage = lazy(() => import('./features/settings/SettingsPage'));
 const ProfilePage = lazy(() => import('./features/settings/ProfilePage'));
+const SubscribePage = lazy(() => import('./features/subscribe/SubscribePage'));
 
 function Fallback() {
   return (
@@ -42,6 +43,7 @@ const router = createHashRouter([
       { path: 'guide', element: page(<GuidePage />) },
       { path: 'settings', element: page(<SettingsPage />) },
       { path: 'profile', element: page(<ProfilePage />) },
+      { path: 'subscribe', element: page(<SubscribePage />) },
     ],
   },
 ]);

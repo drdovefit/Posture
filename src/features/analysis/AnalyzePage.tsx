@@ -47,6 +47,8 @@ import { scheduleSync } from '../../lib/autosync';
 import { useActiveClient } from '../../state/useClient';
 import { useAuth } from '../../state/auth';
 import PostureEditor from '../../components/PostureEditor';
+import ProLock from '../../components/ProLock';
+import { useTier } from '../../lib/entitlement';
 import MetricList from '../../components/MetricList';
 import ScoreRing from '../../components/ScoreRing';
 import SignInModal from '../../components/SignInModal';
@@ -76,6 +78,7 @@ interface Shot {
 export default function AnalyzePage() {
   const { activeId } = useActiveClient();
   const { user } = useAuth();
+  const { isPro } = useTier();
   const [showSignIn, setShowSignIn] = useState(false);
   const [animalSaveGone, setAnimalSaveGone] = useState(false);
   const pendingSave = useRef(false);
@@ -92,6 +95,18 @@ export default function AnalyzePage() {
   // First-scan guide recommendation (once, before the very first scan).
   const navigate = useNavigate();
   const savedCount = useLiveQuery(() => db.assessments.count(), [], 0);
+  // How many saved scans of each view (free tier allows one of each).
+  const savedByView = useLiveQuery(
+    async () => {
+      const all = await db.assessments.toArray();
+      return {
+        lateral: all.filter((a) => a.view === 'lateral').length,
+        anterior: all.filter((a) => a.view === 'anterior').length,
+      } as Record<ViewType, number>;
+    },
+    [],
+    { lateral: 0, anterior: 0, posterior: 0 } as Record<ViewType, number>,
+  );
   const [scanGuideSeen, setScanGuideSeen] = useState(() => {
     try {
       return localStorage.getItem('posturelab-scan-guide-seen') === '1';
@@ -100,6 +115,7 @@ export default function AnalyzePage() {
     }
   });
   const [showScanGuide, setShowScanGuide] = useState(false);
+  const [showLimit, setShowLimit] = useState(false);
   const pendingScan = useRef<'camera' | 'file' | null>(null);
 
   function runScan(action: 'camera' | 'file') {
@@ -109,6 +125,12 @@ export default function AnalyzePage() {
   function startScan(action: 'camera' | 'file') {
     if (!user) {
       setShowSignIn(true);
+      return;
+    }
+    // Free tier: one front and one side scan. Editing the one you already have
+    // is fine, but a second of the same view needs Pro.
+    if (!isPro && (savedByView?.[view] ?? 0) >= 1 && shots[view]?.savedId == null) {
+      setShowLimit(true);
       return;
     }
     // First ever scan and they haven't seen the guide tip: recommend it once.
@@ -677,25 +699,65 @@ export default function AnalyzePage() {
               <div className="mb-3">
                 <h2 className="font-semibold">Suggested focus areas</h2>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {suggestions.map((s) => (
-                  <div key={s.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-                    <div className="mb-1 flex items-center gap-2">
-                      <span className="chip bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200">
-                        {s.category}
-                      </span>
-                      <span className="text-sm font-medium">{s.title}</span>
+              {isPro ? (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {suggestions.map((s) => (
+                    <div key={s.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+                      <div className="mb-1 flex items-center gap-2">
+                        <span className="chip bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200">
+                          {s.category}
+                        </span>
+                        <span className="text-sm font-medium">{s.title}</span>
+                      </div>
+                      <p className="text-sm text-slate-500">{s.detail}</p>
                     </div>
-                    <p className="text-sm text-slate-500">{s.detail}</p>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <ProLock
+                  title="Your fixes are Pro"
+                  blurb="See the exercises and cues for each of your flagged areas."
+                />
+              )}
             </div>
           )}
         </>
       )}
 
       <DotGuide view={view} open={showDotGuide} onClose={() => setShowDotGuide(false)} />
+
+      {showLimit && (
+        <div
+          className="fixed inset-0 z-[65] grid place-items-center bg-black/70 p-4"
+          onClick={() => setShowLimit(false)}
+        >
+          <div
+            className="card w-full max-w-sm space-y-4 p-6 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-3xl">🔒</div>
+            <div>
+              <h2 className="text-lg font-bold">You've used your free scan</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Free includes one front and one side scan. Go Pro for unlimited scans and
+                full progress tracking.
+              </p>
+            </div>
+            <button
+              className="btn-primary w-full"
+              onClick={() => {
+                setShowLimit(false);
+                navigate('/subscribe');
+              }}
+            >
+              See Pro
+            </button>
+            <button className="btn-ghost w-full" onClick={() => setShowLimit(false)}>
+              Not now
+            </button>
+          </div>
+        </div>
+      )}
 
       {showScanGuide && (
         <div

@@ -6,6 +6,8 @@ import { useActiveClient } from '../../state/useClient';
 import { useAuth } from '../../state/auth';
 import ScoreRing from '../../components/ScoreRing';
 import SuggestionItem from '../../components/SuggestionItem';
+import ProLock from '../../components/ProLock';
+import { useTier } from '../../lib/entitlement';
 import { useCroppedPortrait } from '../../state/useCroppedPortrait';
 import { analyze } from '../../lib/measure';
 import { getSuggestions } from '../../lib/measure/suggestions';
@@ -42,6 +44,7 @@ function RecentCard({ a }: { a: Assessment }) {
 export default function DashboardPage() {
   const { activeId } = useActiveClient();
   const { user } = useAuth();
+  const { isPro } = useTier();
   const firstName = user?.displayName?.trim().split(/\s+/)[0];
   const [showGuideTip, setShowGuideTip] = useState(() => {
     try {
@@ -177,14 +180,21 @@ export default function DashboardPage() {
           {focus.length > 0 && (
             <div className="card p-5">
               <h2 className="mb-3 text-lg font-semibold">What to work on</h2>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {focus.slice(0, 3).map((s) => (
-                  <SuggestionItem key={s.id} s={s} />
-                ))}
-              </div>
-              <p className="mt-2 text-xs text-slate-400">
-                From your latest scan.
-              </p>
+              {isPro ? (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {focus.slice(0, 3).map((s) => (
+                      <SuggestionItem key={s.id} s={s} />
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs text-slate-400">From your latest scan.</p>
+                </>
+              ) : (
+                <ProLock
+                  title="Your personalized fixes are Pro"
+                  blurb="See exactly what to work on and how to fix each area from your latest scan."
+                />
+              )}
             </div>
           )}
 

@@ -4,6 +4,7 @@ import { useAuth } from '../../state/auth';
 import Submissions from '../../components/Submissions';
 import SignInModal from '../../components/SignInModal';
 import { submitFeedback, isOwnerEmail, type FeedbackType } from '../../lib/feedback';
+import { useTier } from '../../lib/entitlement';
 
 const DRAFT_KEY = 'posturelab-feedback-draft';
 
@@ -46,6 +47,7 @@ function Chip({
 export default function SettingsPage() {
   const { user } = useAuth();
   const isOwner = isOwnerEmail(user?.email);
+  const { isPro, previewFree, setPreviewFree, canPreview } = useTier();
 
   // --- Feedback --------------------------------------------------------------
   const initialDraft = loadDraft();
@@ -97,6 +99,40 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <h1 className="text-2xl font-bold">Settings</h1>
+
+      <div className="card p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Membership</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {isPro ? "You're on Pro — everything unlocked." : "You're on the free plan."}
+            </p>
+          </div>
+          <span
+            className={`chip ${
+              isPro
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'
+                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+            }`}
+          >
+            {isPro ? 'Pro' : 'Free'}
+          </span>
+        </div>
+        <Link to="/subscribe" className="btn-primary mt-3 inline-block">
+          {isPro ? 'View plan' : 'Upgrade to Pro'}
+        </Link>
+        {canPreview && (
+          <label className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-3 text-sm text-slate-500 dark:border-slate-800">
+            <input
+              type="checkbox"
+              checked={previewFree}
+              onChange={(e) => setPreviewFree(e.target.checked)}
+              className="h-4 w-4 accent-brand-500"
+            />
+            Preview the free experience (owner only)
+          </label>
+        )}
+      </div>
 
       <div className="card p-5">
         <h2 className="mb-1 font-semibold">Account</h2>

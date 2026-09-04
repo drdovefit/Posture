@@ -10,6 +10,8 @@ import { getSuggestions } from '../../lib/measure/suggestions';
 import MetricList from '../../components/MetricList';
 import ScoreRing from '../../components/ScoreRing';
 import SuggestionItem from '../../components/SuggestionItem';
+import ProLock from '../../components/ProLock';
+import { useTier } from '../../lib/entitlement';
 import ScoreTrend from './ScoreTrend';
 import type { Assessment, Client } from '../../lib/types';
 import { useState } from 'react';
@@ -26,6 +28,7 @@ function scoreColor(score: number) {
 
 function Row({ a, client }: { a: Assessment; client: Client | null }) {
   const thumb = useCroppedPortrait(a); // cropped to the body, for the thumbnail
+  const { isPro } = useTier();
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   return (
@@ -151,11 +154,18 @@ function Row({ a, client }: { a: Assessment; client: Client | null }) {
             return (
               <div>
                 <h3 className="mb-2 font-semibold">What to work on</h3>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {suggestions.map((s) => (
-                    <SuggestionItem key={s.id} s={s} />
-                  ))}
-                </div>
+                {isPro ? (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {suggestions.map((s) => (
+                      <SuggestionItem key={s.id} s={s} />
+                    ))}
+                  </div>
+                ) : (
+                  <ProLock
+                    title="Your fixes are Pro"
+                    blurb="See what to work on and how to fix each flagged area."
+                  />
+                )}
               </div>
             );
           })()}

@@ -7,6 +7,7 @@ import ConsentGate from './components/ConsentGate';
 import LegalDoc from './components/LegalDoc';
 import { LEGAL_VERSION } from './legal/documents';
 import { hasAcceptedLegal, isLegalUpdate, acceptLegal, cacheAccountLegal } from './legal/consent';
+import { TierProvider } from './lib/entitlement';
 import { fetchAccountLegalVersion, pushAccountLegalVersion } from './legal/legalSync';
 import { useAuth } from './state/auth';
 import { handleAccountChange } from './lib/accountData';
@@ -114,6 +115,7 @@ export default function App() {
   }
 
   return (
+    <TierProvider>
     <div className="mx-auto flex min-h-full max-w-6xl flex-col">
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
         <div className="flex items-center gap-3 px-4 py-3">
@@ -206,5 +208,6 @@ export default function App() {
         />
       )}
     </div>
+    </TierProvider>
   );
 }

@@ -45,5 +45,22 @@ service cloud.firestore {
                .hasOnly(['dismissedByUser'])
         );
     }
+
+    // --- Pro members list (fed from Skool via Zapier) ------------------------
+    // Each paid member is one document named by their email. A signed-in user
+    // may read ONLY their own document to learn their Pro status; the list is
+    // not enumerable. Only owners write from a client; Zapier writes with an
+    // admin service account, which bypasses these rules entirely.
+    match /proMembers/{id} {
+      allow get: if isOwner() || (request.auth != null && request.auth.token.email == id);
+      allow list: if isOwner();
+      allow write: if isOwner();
+    }
+
+    // --- Global flags (e.g. the "everyone is Pro" testing switch) ------------
+    match /config/{id} {
+      allow read: if request.auth != null;
+      allow write: if isOwner();
+    }
   }
 }
