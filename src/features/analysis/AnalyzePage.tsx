@@ -116,6 +116,7 @@ export default function AnalyzePage() {
   });
   const [showScanGuide, setShowScanGuide] = useState(false);
   const [showLimit, setShowLimit] = useState(false);
+  const [confirmReplace, setConfirmReplace] = useState(false);
   const pendingScan = useRef<'camera' | 'file' | null>(null);
 
   function runScan(action: 'camera' | 'file') {
@@ -548,7 +549,7 @@ export default function AnalyzePage() {
                       </button>
                     </>
                   )}
-                  <button className="btn-ghost" onClick={replacePhoto}>
+                  <button className="btn-ghost" onClick={() => setConfirmReplace(true)}>
                     Replace photo
                   </button>
                 </div>
@@ -737,6 +738,38 @@ export default function AnalyzePage() {
 
       <DotGuide view={view} open={showDotGuide} onClose={() => setShowDotGuide(false)} />
 
+      {confirmReplace && (
+        <div
+          className="fixed inset-0 z-[65] grid place-items-center bg-black/70 p-4"
+          onClick={() => setConfirmReplace(false)}
+        >
+          <div
+            className="card w-full max-w-sm space-y-4 p-6 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-3xl">⚠️</div>
+            <div>
+              <h2 className="text-lg font-bold">Replace this photo?</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                This removes the current photo and the dots you placed. It can't be undone.
+              </p>
+            </div>
+            <button
+              className="w-full rounded-xl bg-red-500 py-2.5 font-semibold text-white transition-colors hover:bg-red-600"
+              onClick={() => {
+                setConfirmReplace(false);
+                replacePhoto();
+              }}
+            >
+              Yes, replace it
+            </button>
+            <button className="btn-ghost w-full" onClick={() => setConfirmReplace(false)}>
+              Keep this photo
+            </button>
+          </div>
+        </div>
+      )}
+
       {showLimit && (
         <div
           className="fixed inset-0 z-[65] grid place-items-center bg-black/70 p-4"
@@ -750,7 +783,7 @@ export default function AnalyzePage() {
             <div>
               <h2 className="text-lg font-bold">You've used your free scan</h2>
               <p className="mt-1 text-sm text-slate-500">
-                Free includes one front and one side scan. Go Pro for unlimited scans and
+                Free includes one front and one side scan. Go Premium for unlimited scans and
                 full progress tracking.
               </p>
             </div>
@@ -761,7 +794,7 @@ export default function AnalyzePage() {
                 navigate('/subscribe');
               }}
             >
-              See Pro
+              See Premium
             </button>
             <button className="btn-ghost w-full" onClick={() => setShowLimit(false)}>
               Not now
